@@ -113,6 +113,15 @@ namespace Gen1.Save
                 get { return this.sv.data.Sub(0X25F6, 7).Decode(); }
                 set { this.sv.data.Update(0X25F6, value.GenerateName()); }
             }
+            public ushort PlayerID
+            {
+                get { var bt = new byte[] { this.sv.data[0x2606], this.sv.data[0x2605] }; return BitConverter.ToUInt16(bt,0); }
+                set { var b = BitConverter.GetBytes(value); Array.Reverse(b); this.sv.data.Update(0x2605, b); }
+            }
+            public uint Money
+            {
+                get { return this.sv.data.Sub(0x25F3, 3).FromBCD(); }
+            }
             internal SaveFile sv;
             internal MainBankClass(SaveFile sv) { this.sv = sv; this.MainData = new MainDataClass(sv); }
             public class MainDataClass
@@ -120,10 +129,13 @@ namespace Gen1.Save
                 public PokedexClass Owned;
                 public PokedexClass Seen;
                 public EnumurableList BagItems;
-                public uint Money
+                
+                public bool[] Badges
                 {
-                    get { return this.sv.data.Sub(0x25F3, 3).FromBCD(); }
-                }
+                    get { return this.sv.data[0x2602].GetBits(); }
+                    set { this.sv.data[0x2602] = value.GetByte(); }
+                }                
+
                 internal SaveFile sv;
                 internal MainDataClass(SaveFile sv) 
                 {

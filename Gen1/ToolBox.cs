@@ -154,6 +154,20 @@ namespace Gen1
             }
             return (uint)result;
         }
+        public static bool[] GetBits(this byte bt)
+        {
+            List<bool> result = new List<bool>();
+            for (int i = 0; i < 8; i++)
+                result.Add(bt.GetBit(i));
+            return result.ToArray();
+        }
+        public static byte GetByte(this bool[] bits)
+        {
+            byte result = 0;
+            for (uint i = 0; i < 8; i++)
+                result.SetBit(i,bits[i]);
+            return result;
+        }
 
     }
 }
