@@ -474,7 +474,8 @@ namespace Tests
             var b = new Gen1.Save.SaveFile(@"A:\Downloads\red.sav");
             var n = b.MainBank.PlayerName;
             b.MainBank.PlayerName = "asd";
-            var cc = b.MainBank.PlayerName;
+            var cc = b.MainBank.MainData.Owned[60];
+            var dd = b.MainBank.RivalName;
         }
         private void listBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
