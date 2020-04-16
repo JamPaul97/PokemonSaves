@@ -471,12 +471,10 @@ namespace Tests
         List<ushort> aa = new List<ushort>();
         private void button1_Click(object sender, EventArgs e)
         {
-            var b = new Gen3.Save.SaveFile(@"A:\Downloads\test.sav");
-            var c = b.Player.Pokemon1.Data.Species;
-            var d = Gen3.Data.Data.Species[b.HallOfFame[1][3].Species].Name;
-            var l = b.HallOfFame[20][3].Level;
-            var n = b.HallOfFame[20][3].Nickname;
-            var bb = b.HallOfFame[20][3].HasEntry;
+            var b = new Gen1.Save.SaveFile(@"A:\Downloads\red.sav");
+            var n = b.MainBank.PlayerName;
+            b.MainBank.PlayerName = "asd";
+            var cc = b.MainBank.PlayerName;
         }
         private void listBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
@@ -507,5 +505,6 @@ namespace Tests
                 return Convert.ToBase64String(imageBytes);
             }
         }
+
     }
 }

@@ -84,6 +84,10 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Gen1\Gen1.csproj">
+      <Project>{7438599f-e909-4abc-af39-d95efe49ff5d}</Project>
+      <Name>Gen1</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Gen3\Gen3.csproj">
       <Project>{1ad8cc35-99dd-4a73-a15e-e0617b0a915a}</Project>
       <Name>Gen3</Name>
