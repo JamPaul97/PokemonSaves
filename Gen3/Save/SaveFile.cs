@@ -78,7 +78,84 @@ namespace Gen3.Save
         public OptionsClass Options;
         public PCBoxClass PCBoxes;
         public PokedexClass Pokedex;
+        public HoFClass HallOfFame;
+        public class HoFClass
+        {
+            SaveFile sv;
+            internal HoFEntry[] entries;
 
+            internal HoFClass(SaveFile sv) { this.sv = sv; this.entries = new HoFEntry[50];
+                for (uint i = 0; i < 50; i++)
+                {
+                    this.entries[i] = new HoFEntry(sv, i);
+                }
+            }
+            public HoFEntry this[uint index]
+            {
+                get { return this.entries[index]; }
+            }
+
+            public class HoFEntry
+            {
+                SaveFile sv;
+                internal byte[] bytes
+                {
+                    get { return this.sv.HoFData.Sub(no * 120, 120); }
+                }
+                internal uint no;
+                public PokemonEntry this[int index]
+                {
+                    get { return this.pkms[index]; }
+                }
+                internal PokemonEntry[] pkms;
+                internal HoFEntry(SaveFile sv,uint number) { this.sv = sv; this.no = number;
+                    this.pkms = new PokemonEntry[6];
+                    for (uint i = 0; i < 6; i++)
+                        this.pkms[i] = new PokemonEntry(this, i);
+                }
+                public class PokemonEntry
+                {
+                    HoFEntry sv;
+                    uint number;
+                    public bool HasEntry
+                    {
+                        get { return !(this.sv.bytes[0] == 0 || this.sv.bytes[1] == 0 || this.sv.bytes[2] == 0); }
+                    }
+                    public uint TrainerID
+                    {
+                        get { return BitConverter.ToUInt32(this.sv.bytes, (20 * (int)number)); }
+                        set { throw new NotImplementedException(); }
+                    }
+                    public uint Personality
+                    {
+                        get { return BitConverter.ToUInt32(this.sv.bytes, (20 * (int)number) + 4); }
+                        set { throw new NotImplementedException(); }
+                    }
+                    public ushort Species
+                    {
+                        get
+                        {
+                            var byteh = this.sv.bytes[(20 * number) + 0x0008];
+                            var bytel = this.sv.bytes[(20 * number) + 0x0009];
+                            return (ushort)(byteh + ((bytel.GetBit(0) == true ? (byte)0x1 : (byte)0x0) << 8));
+                        }
+                        set { throw new NotImplementedException(); }
+                    }
+                    public byte Level
+                    {
+                        get { return (byte)(this.sv.bytes[(20 * number) + 0x0009] >> 1); }
+                        set { throw new NotImplementedException(); }
+                    }
+                    public string Nickname
+                    {
+                        get { return this.sv.bytes.Sub((20 * number) + 0x000A, 10).Decode(); }
+                        set { throw new NotImplementedException(); }
+                    }
+                    public PokemonEntry(HoFEntry sv,uint number) { this.sv = sv; this.number = number; }
+                }
+            }
+
+        }
         public class PokedexClass
         {
             SaveFile sv;
@@ -160,7 +237,7 @@ namespace Gen3.Save
                 }
                 internal SeenClass(SaveFile sv) { this.sv = sv; }
             }
-            internal PokedexClass(SaveFile sv) { this.sv = sv; this.Seen = new SeenClass(sv); this.Onwed = new PokedexClass.Onwed(sv); }
+            internal PokedexClass(SaveFile sv) { this.sv = sv; this.Seen = new SeenClass(sv); this.Onwed = new OnwedClass(sv); }
             
         }
         public class PlayerClass
@@ -986,6 +1063,7 @@ namespace Gen3.Save
             this.Options = new OptionsClass(this);
             this.PCBoxes = new PCBoxClass(this);
             this.Pokedex = new PokedexClass(this);
+            this.HallOfFame = new HoFClass(this);
         }
     }
 }

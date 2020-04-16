@@ -13,7 +13,7 @@ namespace Toolbox
             if (pos > 7)
                 throw new Exception("Bit out of bounds");
             var r = bt & (byte)Math.Pow(2, pos);
-            return r >> pos-1 == 0 ? false : true;
+            return r >> pos == 0 ? false : true;
         }
         public static bool GetBit(this byte bt, uint pos)
         {

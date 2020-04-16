@@ -473,9 +473,10 @@ namespace Tests
         {
             var b = new Gen3.Save.SaveFile(@"A:\Downloads\test.sav");
             var c = b.Player.Pokemon1.Data.Species;
-            var d = b.Pokedex.Seen[1];
-            b.Pokedex.Seen[1] = false;
-            var dddd = b.Pokedex.Seen[1];
+            var d = Gen3.Data.Data.Species[b.HallOfFame[1][3].Species].Name;
+            var l = b.HallOfFame[20][3].Level;
+            var n = b.HallOfFame[20][3].Nickname;
+            var bb = b.HallOfFame[20][3].HasEntry;
         }
         private void listBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
