@@ -83,23 +83,68 @@ namespace Gen3.Save
         {
             SaveFile sv;
             public SeenClass Seen;
+            public OnwedClass Onwed;
             internal byte[] PokedexSeenA
             {
                 get { return this.sv.GameSaveA.sections[0].wholeData.Sub(0x005C, 49); }
             }
-            
-            public class SeenClass
+            public class OnwedClass
             {
                 SaveFile sv;
                 public bool this[uint PokemonID]
                 {
+
+                    get
+                    {
+                        if (PokemonID > 277)
+                            PokemonID -= 25;
+                        var ByteIndex = (uint)(PokemonID / 8);
+                        var BitIndex = (uint)(PokemonID % 8);
+                        return this.sv.GameSaveA.sections[0].wholeData[0x0028 + ByteIndex].GetBit(BitIndex);
+                    }
+                    set
+                    {
+                        if (PokemonID > 277)
+                            PokemonID -= 25;
+                        var ByteIndex = (uint)(PokemonID / 8);
+                        var BitIndex = (uint)(PokemonID % 8);
+                        this.sv.GameSaveA.sections[0].wholeData[0x0028 + ByteIndex].SetBit(BitIndex, value);
+                    }
+                }
+                internal OnwedClass(SaveFile sv) { this.sv = sv; }
+            }
+            public class SeenClass
+            {
+
+                internal Dictionary<Game, uint> A = new Dictionary<Game, uint>()
+                {
+                    {Game.E, 0x005C },
+                    {Game.RS, 0x005C },
+                    {Game.FL, 0x005C }
+                };
+                internal Dictionary<Game, uint> B = new Dictionary<Game, uint>()
+                {
+                    {Game.E, 0x0988 },
+                    {Game.RS, 0x0938 },
+                    {Game.FL, 0x05F8 }
+                };
+                internal Dictionary<Game, uint> C = new Dictionary<Game, uint>()
+                {
+                    {Game.E, 0x0CA4 },
+                    {Game.RS, 0x0C0C },
+                    {Game.FL, 0x0B98 }
+                };
+                SaveFile sv;
+                public bool this[uint PokemonID]
+                {
+                    
                     get 
                     {
                         if (PokemonID > 277)
                             PokemonID -= 25;
                         var ByteIndex = (uint)(PokemonID / 8);
                         var BitIndex = (uint)(PokemonID % 8);
-                        return this.sv.GameSaveA.sections[0].wholeData[0x005C + ByteIndex].GetBit(BitIndex);
+                        return this.sv.GameSaveA.sections[0].wholeData[A[this.sv.GameType] + ByteIndex].GetBit(BitIndex);
                     }
                     set 
                     {
@@ -107,12 +152,15 @@ namespace Gen3.Save
                             PokemonID -= 25;
                         var ByteIndex = (uint)(PokemonID / 8);
                         var BitIndex = (uint)(PokemonID % 8);
-                        this.sv.GameSaveA.sections[0].wholeData[0x005C + ByteIndex].SetBit(BitIndex, value);
+                        this.sv.GameSaveA.sections[0].wholeData[A[this.sv.GameType] + ByteIndex].SetBit(BitIndex, value);
+                        this.sv.GameSaveA.sections[1].wholeData[B[this.sv.GameType] + ByteIndex].SetBit(BitIndex, value);
+                        this.sv.GameSaveA.sections[4].wholeData[C[this.sv.GameType] + ByteIndex].SetBit(BitIndex, value);
+
                     }
                 }
-                public SeenClass(SaveFile sv) { this.sv = sv; }
+                internal SeenClass(SaveFile sv) { this.sv = sv; }
             }
-            public PokedexClass(SaveFile sv) { this.sv = sv; this.Seen = new SeenClass(sv); }
+            internal PokedexClass(SaveFile sv) { this.sv = sv; this.Seen = new SeenClass(sv); this.Onwed = new PokedexClass.Onwed(sv); }
             
         }
         public class PlayerClass
