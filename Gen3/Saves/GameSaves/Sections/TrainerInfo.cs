@@ -12,7 +12,7 @@ namespace Gen3.Saves.GameSaves.Sections
         private byte[] data;
         public string PlayerName
         {
-            get { return (data.SubArray(0x0, 7)).Decode(); }
+            get { return string.Empty; }//(data.SubArray(0x0, 7)).Decode(); }
             set
             {
                 throw new NotImplementedException();//data.Replace(0, value.Encode());

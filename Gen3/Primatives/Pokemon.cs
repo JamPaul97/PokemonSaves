@@ -17,7 +17,11 @@ namespace Gen3.Primatives
         public string OTName;
         public Marking Markings;
         public uint Checksum;
-        public uint Level;
+        public byte Level
+        {
+            get { return data[84]; }
+            set { data[84] = value; }
+        }
         public uint Pokerus;
         public short CurrentHP;
         public short TotalHP;
@@ -32,11 +36,10 @@ namespace Gen3.Primatives
             this.data = arr;
             this.Personality = BitConverter.ToUInt32(data.SubArray(0, 4), 0);
             this.OTID = BitConverter.ToUInt32(data.SubArray(4, 4), 0);
-            this.Nickaname = data.SubArray(8, 10).Decode();
+            //this.Nickaname = data.SubArray(8, 10).Decode();
             this.Language = (Language)BitConverter.ToInt16(data.SubArray(18, 2), 0);
-            this.OTName = data.SubArray(20, 7).Decode();
+            //this.OTName = data.SubArray(20, 7).Decode();
             this.Markings = (Marking)data[27];
-            this.Level = BitConverter.ToUInt32(new byte[] { data.SubArray(84, 1)[0], 0, 0, 0 }, 0);
             this.Pokerus = BitConverter.ToUInt32(new byte[] { data.SubArray(85, 1)[0], 0, 0, 0 }, 0);
             this.CurrentHP = BitConverter.ToInt16(data.SubArray(86, 2), 0);
             this.TotalHP = BitConverter.ToInt16(data.SubArray(88, 2), 0);

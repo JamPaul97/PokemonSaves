@@ -88,6 +88,10 @@
       <Project>{1ad8cc35-99dd-4a73-a15e-e0617b0a915a}</Project>
       <Name>Gen3</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Toolbox\Toolbox.csproj">
+      <Project>{affb0ac8-dab5-4900-ad7c-55f0adb93e2b}</Project>
+      <Name>Toolbox</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

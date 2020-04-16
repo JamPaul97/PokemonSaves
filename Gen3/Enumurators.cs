@@ -8,12 +8,18 @@ namespace Gen3
 {
     public enum Gender
     {
-        Male,
-        Female
+        Male = 0x00,
+        Female = 0x01
     }
     public enum ButtonSet
     {
         Normal =0x01,
+        LR = 0x02,
+        LA = 0x03
+    }
+    public enum ButtonMode
+    {
+        Normal = 0x01,
         LR = 0x02,
         LA = 0x03
     }
@@ -23,8 +29,8 @@ namespace Gen3
     }
     public enum Sound
     {
-        Mono,
-        Stereo
+        Mono = 0x0,
+        Stereo = 0x1
     }
     public enum BattleStyle
     {

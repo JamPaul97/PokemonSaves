@@ -1,4 +1,5 @@
 ﻿using System;
+using Toolbox;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -467,15 +468,18 @@ namespace Tests
 "Unown",
 "Unown",
 "??????????",};
+        List<ushort> aa = new List<ushort>();
         private void button1_Click(object sender, EventArgs e)
         {
-            var b = new Gen3.Saves.Save(@"A:\Downloads\Pokemon Emerald All Shiny Fixed.sav");
-            var c = b.GameSaveA.TeamItems.Pokemon3.Data.Growth.Species;
-            pictureBox1.Image = Gen3.Data.Data.Species[c].Image;
+            var b = new Gen3.Save.SaveFile(@"A:\Downloads\test.sav");
+            var c = b.Player.Pokemon1.Data.Species;
+            var d = b.Pokedex.Seen[1];
+            b.Pokedex.Seen[1] = false;
+            var dddd = b.Pokedex.Seen[1];
         }
         private void listBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
-            pictureBox1.Image = Gen3.Data.Data.Species[listBox1.SelectedIndex].Image;
+            //pictureBox1.Image = Gen3.Data.Data.Items[aa[listBox1.SelectedIndex]].Image;
         }
         public System.Drawing.Image GetImageFromURL( string url)
         {
