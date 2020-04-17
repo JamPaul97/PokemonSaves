@@ -472,12 +472,12 @@ namespace Tests
         private void button1_Click(object sender, EventArgs e)
         {
             var b = new Gen1.Save.SaveFile(@"A:\Desktop\Pokemon Red.sav");
-            var c = b.MainBank.Party[2].EV_Attack;
-            var cc = b.MainBank.Party[2].EV_Defence;
-            var ccc = b.MainBank.Party[2].EV_Speed;
-            var cccc = b.MainBank.Party[1].Nickname;
+            var c = b.PCStorageBank.checkSum1();
+            var dd = b.PCStorageBank.ChecksumWhole2;
+            var cc = b.PCStorageBank[5][1].Level;
+            
             //var aa = BitConverter.ToUInt16(c, 0x01);
-        }
+         }
         private void listBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
             //pictureBox1.Image = Gen3.Data.Data.Items[aa[listBox1.SelectedIndex]].Image;

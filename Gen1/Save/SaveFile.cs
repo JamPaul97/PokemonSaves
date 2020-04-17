@@ -17,6 +17,7 @@ namespace Gen1.Save
         internal const uint FourthBankOffset = 0x6000; //Boxes 7-12
         public MainBankClass MainBank;
         public MiscBankClass MiscBank;
+        public PCStorageBankClass PCStorageBank;
         internal Data data;
         internal string FileName;
 
@@ -42,6 +43,7 @@ namespace Gen1.Save
 
             this.MainBank = new MainBankClass(this);
             this.MiscBank = new MiscBankClass(this);
+            this.PCStorageBank = new PCStorageBankClass(this);
         }
         public class MiscBankClass
         {
@@ -457,6 +459,199 @@ namespace Gen1.Save
                 SaveFile sv;
                 internal uint no;
                 internal PartyPokemonClass(SaveFile sv,uint no) { this.sv = sv; this.no = no; }
+            }
+        }
+        public class PCStorageBankClass
+        {
+            
+            internal readonly uint[] BoxOfssets =  new uint[]{ 0x4000, 0x4462, 0x48C4, 0x4D26, 0x5188, 0x55EA, 0x6000, 0x6462, 0x68C4, 0x6D26, 0x7188, 0x75EA };
+            internal SaveFile sv;
+            internal PCStorageClass[] boxes;
+            internal PCStorageBankClass(SaveFile sv)
+            {
+                this.sv = sv; this.boxes = new PCStorageClass[12]; for (int i = 0; i < 12; i++)
+                {
+                    this.boxes[i] = new PCStorageClass(sv, BoxOfssets[i]);
+                } }
+            public PCStorageClass this[int index]
+            {
+                get { return this.boxes[index]; }
+            }
+
+            public byte ChecksumWhole1 { get { return this.sv.data.Read.Byte(0x5A4C); } }
+            public byte ChecksumWhole2 { get { return this.sv.data.Read.Byte(0X7A4D); } }
+            public byte[] Checksums1
+            {
+                get { return new byte[] {   this.sv.data.Read.Byte(0x5A4D),
+                                            this.sv.data.Read.Byte(0x5A4E),
+                                            this.sv.data.Read.Byte(0x5A4F),
+                                            this.sv.data.Read.Byte(0x5A50),
+                                            this.sv.data.Read.Byte(0x5A51),
+                                            this.sv.data.Read.Byte(0x5A52)}; }
+            }
+            public byte[] Checksums2
+            {
+                get
+                {
+                    return new byte[] {   this.sv.data.Read.Byte(0x7A4D),
+                                            this.sv.data.Read.Byte(0x7A4E),
+                                            this.sv.data.Read.Byte(0x7A4F),
+                                            this.sv.data.Read.Byte(0x7A50),
+                                            this.sv.data.Read.Byte(0x7A51),
+                                            this.sv.data.Read.Byte(0x7A52)};
+                }
+            }
+            public byte checkSum1()
+            {
+                byte result = 0;
+                for (uint i = 0x6000; i <= (0x7a4b); i++)
+                {
+                    result += this.sv.data[i];
+                }
+                result ^= 0xFF;
+                return result;
+            }
+
+            public class PCStorageClass
+            {
+                internal uint Offset;
+                internal const uint Size = 0x462;
+                internal SaveFile sv;
+                public byte PokemonCount
+                {
+                    get { return this.sv.data.Read.Byte(this.Offset); }
+                }
+                internal PCPokemonClass[] pkms; 
+                public PCPokemonClass this[int index]
+                {
+                    get { return this.pkms[index]; }
+                }
+                internal PCStorageClass(SaveFile sv,uint offset) { this.sv = sv; this.Offset = offset; this.pkms = new PCPokemonClass[20];
+                    for (uint i = 0; i < 20; i++)
+                    {
+                        this.pkms[i] = new PCPokemonClass(sv, offset, i);
+                    }
+                }
+                public class PCPokemonClass
+                {
+                    internal uint Offset;
+                    internal uint DataOffset
+                    {
+                        get { return this.Offset + 0x16 + (0x21 * NumberInBox); }
+                    }
+                    internal uint NumberInBox;
+                    public byte Species
+                    {
+                        get { return this.sv.data.Read.Byte(this.Offset + 0x01 + (0x01*NumberInBox)); }
+                    }
+                    public ushort CurrentHP
+                    {
+                        get { return this.sv.data.Read.Ushort(DataOffset + 0x01); }
+                    }
+                    public byte Level
+                    {
+                        get { return this.sv.data.Read.Byte(DataOffset + 0x03); }
+                    }
+                    public byte StatusCondition
+                    {
+                        get { return this.sv.data.Read.Byte(DataOffset + 0x04); }
+                    }
+                    public byte Type1
+                    {
+                        get { return this.sv.data.Read.Byte(DataOffset + 0x05); }
+                    }
+                    public byte Type2
+                    {
+                        get { return this.sv.data.Read.Byte(DataOffset + 0x06); }
+                    }
+                    public byte CatchRate
+                    {
+                        get { return this.sv.data.Read.Byte(DataOffset + 0x07); }
+                    }
+                    public byte Move1
+                    {
+                        get { return this.sv.data.Read.Byte(DataOffset + 0x08); }
+                    }
+                    public byte Move2
+                    {
+                        get { return this.sv.data.Read.Byte(DataOffset + 0x09); }
+                    }
+                    public byte Move3
+                    {
+                        get { return this.sv.data.Read.Byte(DataOffset + 0x0A); }
+                    }
+                    public byte Move4
+                    {
+                        get { return this.sv.data.Read.Byte(DataOffset + 0x0B); }
+                    }
+                    public ushort OTID
+                    {
+                        get { return this.sv.data.Read.Ushort(DataOffset + 0x0C); }
+                    }
+                    public uint Experience
+                    {
+                        get { return this.sv.data.Read.ThreeBytes(DataOffset + 0x0E); }
+                    }
+                    public ushort EV_HitPoints
+                    {
+                        get { return this.sv.data.Read.Ushort(DataOffset + 0x11); }
+                    }
+                    public ushort EV_Attack
+                    {
+                        get { return this.sv.data.Read.Ushort(DataOffset + 0x13); }
+                    }
+                    public ushort EV_Defence
+                    {
+                        get { return this.sv.data.Read.Ushort(DataOffset + 0x15); }
+                    }
+                    public ushort EV_Speed
+                    {
+                        get { return this.sv.data.Read.Ushort(DataOffset + 0x17); }
+                    }
+                    public ushort EV_Special
+                    {
+                        get { return this.sv.data.Read.Ushort(DataOffset + 0x19); }
+                    }
+                    public byte IV_Attack
+                    {
+                        get { return (byte)(this.sv.data.Read.Byte(DataOffset + 0x1B) >> 4); }
+                    }
+                    public byte IV_Defence
+                    {
+                        get { return (byte)((this.sv.data.Read.Byte(DataOffset + 0x1B) & 0b00001111)); }
+                    }
+                    public byte IV_Speed
+                    {
+                        get { return (byte)(this.sv.data.Read.Byte(DataOffset + 0x1C) >> 4); }
+                    }
+                    public byte IV_Special
+                    {
+                        get { return (byte)((this.sv.data.Read.Byte(DataOffset + 0x1C) & 0b00001111)); }
+                    }
+                    public byte Move1_PP
+                    {
+                        get { return this.sv.data.Read.Byte(DataOffset + 0x1D); }
+                    }
+                    public byte Move2_PP
+                    {
+                        get { return this.sv.data.Read.Byte(DataOffset + 0x1E); }
+                    }
+                    public byte Move3_PP
+                    {
+                        get { return this.sv.data.Read.Byte(DataOffset + 0x1F); }
+                    }
+                    public byte Move4_PP
+                    {
+                        get { return this.sv.data.Read.Byte(DataOffset + 0x20); }
+                    }
+                    public string Name
+                    {
+                        get { return this.sv.data.Read.String(Offset + 0x386 + (0x0B * NumberInBox),0xB); }
+                    }
+                    internal SaveFile sv;
+                    internal PCPokemonClass(SaveFile sv, uint Offset,uint no) { this.sv = sv;this.Offset = Offset;this.NumberInBox = no; }
+                }
+
             }
         }
 
