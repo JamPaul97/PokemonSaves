@@ -471,13 +471,12 @@ namespace Tests
         List<ushort> aa = new List<ushort>();
         private void button1_Click(object sender, EventArgs e)
         {
-            var b = new Gen1.Save.SaveFile(@"A:\Downloads\red.sav");
-            var n = b.MainBank.PlayerName;
-            b.MainBank.PlayerName = "asd";
-            var cc = b.MainBank.PlayerID;
-            var bbbb = new byte[] { 0x84,0xDD };
-            var dddb = BitConverter.ToUInt16(bbbb,0);
-            
+            var b = new Gen1.Save.SaveFile(@"A:\Desktop\Pokemon Red.sav");
+            var c = b.MainBank.Party[2].EV_Attack;
+            var cc = b.MainBank.Party[2].EV_Defence;
+            var ccc = b.MainBank.Party[2].EV_Speed;
+            var cccc = b.MainBank.Party[1].Nickname;
+            //var aa = BitConverter.ToUInt16(c, 0x01);
         }
         private void listBox1_SelectedIndexChanged(object sender, EventArgs e)
         {

@@ -17,27 +17,25 @@ namespace Gen1.Save
         internal const uint FourthBankOffset = 0x6000; //Boxes 7-12
         public MainBankClass MainBank;
         public MiscBankClass MiscBank;
-        internal byte[] data;
+        internal Data data;
+        internal string FileName;
 
         public SaveFile(string FileName)
         {
             var temp = File.ReadAllBytes(FileName);
-            if (temp.Length != FileSize)
+            if (temp.Length < FileSize)
                 throw new Exception("Not valid Generator I savefile.");
-            this.data = temp;
+            this.data = new Data(temp);
+            this.FileName = FileName;
             Initialize();
         }
-
-        public byte GenerateChecksum
+        public void Save()
         {
-            get
-            {
-                byte result = 255;
-                for (int i = 0x2598; i < 0x3522; i++)
-                    result -= this.data[i];
-                return result;
-            }
+            this.MainBank.RecalculateChecksum();
+            File.WriteAllBytes(this.FileName, this.data);
         }
+        
+        
         public void Initialize()
         {
 
@@ -103,48 +101,109 @@ namespace Gen1.Save
 
             };
             public MainDataClass MainData;
+            public FlagClass Flags;
+            public PartyClass Party;
             public string PlayerName
             {
-                get { return this.sv.data.Sub(Offsets[OffsetEnum.PlayerName], Sizes[OffsetEnum.PlayerName]).Decode(); }
-                set { this.sv.data.Update(Offsets[OffsetEnum.PlayerName], value.GenerateName()); }
+                get { return this.sv.data.Read.String(Offsets[OffsetEnum.PlayerName], Sizes[OffsetEnum.PlayerName]); }
+                set { throw new NotImplementedException(); }
             }
             public string RivalName
             {
-                get { return this.sv.data.Sub(0X25F6, 7).Decode(); }
-                set { this.sv.data.Update(0X25F6, value.GenerateName()); }
+                get { return this.sv.data.Read.String(0X25F6, 7); }
+                set { throw new NotImplementedException(); }
             }
             public ushort PlayerID
             {
-                get { var bt = new byte[] { this.sv.data[0x2606], this.sv.data[0x2605] }; return BitConverter.ToUInt16(bt,0); }
-                set { var b = BitConverter.GetBytes(value); Array.Reverse(b); this.sv.data.Update(0x2605, b); }
+                get { return this.sv.data.Read.Ushort(0x2605); }
+                set { throw new NotImplementedException(); }
+            }
+            public byte PlayTimeHours
+            {
+                get { return this.sv.data[0x2CED]; }
+                set { this.sv.data[0x2CED] = value; }
+            }
+            public byte PlayTimeMaxed
+            {
+                get { return this.sv.data[0x2CEE]; }
+            }
+            public byte PlayTimeMinutes
+            {
+                get { return this.sv.data[0x2CEF]; }
+                set { this.sv.data[0x2CEF] = value; }
+            }
+            public byte PlayTimeSeconds
+            {
+                get { return this.sv.data[0x2CF0]; }
+                set { this.sv.data[0x2CF0] = value; }
+            }
+            public byte PlayTimeFrames
+            {
+                get { return this.sv.data[0x2CF1]; }
+                set { this.sv.data[0x2CF1] = value; }
             }
             public uint Money
             {
-                get { return this.sv.data.Sub(0x25F3, 3).FromBCD(); }
+                get { return this.sv.data.Read.BCDThreeBytes(0x25F3); }
+            }
+            public uint SlotCoins
+            {
+                get { return this.sv.data.Read.BCDThreeBytes(0x2850); }
+            }
+            public string DaycareName
+            {
+                get { return this.sv.data.Read.String(0x2CF5, 11); }
+            }
+            public byte DayCarePokemon
+            {
+                get { return this.sv.data[0x2D0B]; }
+            }
+            public byte DayCareInUse
+            {
+                get { return this.sv.data[0x2CF4]; }
+            }
+
+
+            internal void RecalculateChecksum()
+            {
+                this.Checksum = GenerateChecksum;
+            }
+            internal byte GenerateChecksum
+            {
+                get
+                {
+                    byte result = 255;
+                    for (int i = 0x2598; i <= 0x3522; i++)
+                        result -= this.sv.data[i];
+                    return result;
+                }
+            }
+            public byte Checksum
+            {
+                get { return this.sv.data[0x3523]; }
+                set { this.sv.data[0x3523] = value; }
             }
             internal SaveFile sv;
-            internal MainBankClass(SaveFile sv) { this.sv = sv; this.MainData = new MainDataClass(sv); }
+            internal MainBankClass(SaveFile sv) { this.sv = sv; this.MainData = new MainDataClass(sv); this.Flags = new FlagClass(sv);this.Party = new PartyClass(sv); }
             public class MainDataClass
             {
                 public PokedexClass Owned;
                 public PokedexClass Seen;
                 public EnumurableList BagItems;
-                
+                public EnumurableList PCItems;
                 public bool[] Badges
                 {
                     get { return this.sv.data[0x2602].GetBits(); }
                     set { this.sv.data[0x2602] = value.GetByte(); }
                 }                
-
                 internal SaveFile sv;
                 internal MainDataClass(SaveFile sv) 
                 {
                     this.sv = sv; 
-
-
                     this.Owned = new PokedexClass(sv,true);
                     this.Seen = new PokedexClass(sv, false);
                     this.BagItems = new EnumurableList(sv, 0x25C9);
+                    this.PCItems = new EnumurableList(sv, 0x27E6);
                 }
                 public class PokedexClass
                 {
@@ -156,7 +215,6 @@ namespace Gen1.Save
                             var ByteIndex = (uint)((Pokemon-1) / 8);
                             var BitIndex = (uint)((Pokemon-1) % 8);
                             var Byte = this.sv.data[offset + ByteIndex];
-                            var bbb = this.sv.data.Sub((uint)offset, 0X13);
                             return Byte.GetBit(BitIndex);
                         }
                         set
@@ -164,7 +222,6 @@ namespace Gen1.Save
                             var ByteIndex = (uint)((Pokemon - 1) / 8);
                             var BitIndex = (uint)((Pokemon - 1) % 8);
                             var Byte = this.sv.data[offset + ByteIndex];
-                            var bbb = this.sv.data.Sub((uint)offset, 0X13);
                             Byte.SetBit(BitIndex,value);
                         }
                     }
@@ -212,6 +269,194 @@ namespace Gen1.Save
                         return true;
                     }
                 }
+            }
+            public class FlagClass
+            {
+                public bool ReceivedOldRod
+                {
+                    get { return this.sv.data[0x29D4].GetBit(3); }
+                    set { throw new NotImplementedException(); }
+                }
+                public bool ReceivedGoodRod
+                {
+                    get { return this.sv.data[0x29D4].GetBit(4); }
+                    set { throw new NotImplementedException(); }
+                }
+                public bool ReceivedSuperRod
+                {
+                    get { return this.sv.data[0x29D4].GetBit(5); }
+                    set { throw new NotImplementedException(); }
+                }
+                public bool SaffronGuardDrink
+                {
+                    get { return this.sv.data[0x29D4].GetBit(6); }
+                    set { throw new NotImplementedException(); }
+                }
+                public bool ReceivedLapras
+                {
+                    get { return this.sv.data[0x29DA].GetBit(0); }
+                    set { throw new NotImplementedException(); }
+                }
+                public bool ReceiverStarter
+                {
+                    get { return this.sv.data[0x29DA].GetBit(3); }
+                    set { throw new NotImplementedException(); }
+                }
+                SaveFile sv;
+                internal FlagClass(SaveFile sv) { this.sv = sv; }
+            }
+            public class PartyClass
+            {
+                internal PartyPokemonClass[] pkms;
+                SaveFile sv;
+                public PartyPokemonClass this[int index]
+                {
+                    get { return this.pkms[index]; }
+                }
+                public PartyClass(SaveFile sv)
+                {
+                    this.sv = sv; this.pkms = new PartyPokemonClass[6]; for (uint i = 0; i < 6; i++) { this.pkms[i] = new PartyPokemonClass(sv, i); } 
+                }
+            }
+            public class PartyPokemonClass
+            {
+                internal uint offset { get { return (0x2F2C+ 0x08 + (44 * no)); } }
+                public byte Species
+                {
+                    get { return this.sv.data[offset]; }
+                    set { this.sv.data[offset] = value; }
+                }
+                public ushort CurrentHP
+                {
+                    get { return this.sv.data.Read.Ushort(offset + 0x01); }
+                }
+                public byte Level
+                {
+                    get { return this.sv.data.Read.Byte(offset + 0x03); }
+                }
+                public byte StatusCondition
+                {
+                    get { return this.sv.data.Read.Byte(offset + 0x04); }
+                }
+                public byte Type1
+                {
+                    get { return this.sv.data.Read.Byte(offset + 0x05); }
+                }
+                public byte Type2
+                {
+                    get { return this.sv.data.Read.Byte(offset + 0x06); }
+                }
+                public byte CatchRate
+                {
+                    get { return this.sv.data.Read.Byte(offset + 0x07); }
+                }
+                public byte Move1
+                {
+                    get { return this.sv.data.Read.Byte(offset + 0x08); }
+                }
+                public byte Move2
+                {
+                    get { return this.sv.data.Read.Byte(offset + 0x09); }
+                }
+                public byte Move3
+                {
+                    get { return this.sv.data.Read.Byte(offset + 0x0A); }
+                }
+                public byte Move4
+                {
+                    get { return this.sv.data.Read.Byte(offset + 0x0B); }
+                }
+                public ushort OTID
+                {
+                    get { return this.sv.data.Read.Ushort(offset + 0x0C); }
+                }
+                public uint Experience
+                {
+                    get { return this.sv.data.Read.ThreeBytes(offset + 0x0E); }
+                }
+                public ushort EV_HitPoints
+                {
+                    get { return this.sv.data.Read.Ushort(offset + 0x11); }
+                }
+                public ushort EV_Attack
+                {
+                    get { return this.sv.data.Read.Ushort(offset + 0x13); }
+                }
+                public ushort EV_Defence
+                {
+                    get { return this.sv.data.Read.Ushort(offset + 0x15); }
+                }
+                public ushort EV_Speed
+                {
+                    get { return this.sv.data.Read.Ushort(offset + 0x17); }
+                }
+                public ushort EV_Special
+                {
+                    get { return this.sv.data.Read.Ushort(offset + 0x19); }
+                }
+                public byte IV_Attack
+                {
+                    get { return (byte)(this.sv.data.Read.Byte(offset + 0x1B) >> 4); }
+                }
+                public byte IV_Defence
+                {
+                    get { return (byte)((this.sv.data.Read.Byte(offset + 0x1B) & 0b00001111)); }
+                }
+                public byte IV_Speed
+                {
+                    get { return (byte)(this.sv.data.Read.Byte(offset + 0x1C) >> 4); }
+                }
+                public byte IV_Special
+                {
+                    get { return (byte)((this.sv.data.Read.Byte(offset + 0x1C) & 0b00001111)); }
+                }
+                public byte Move1_PP
+                {
+                    get { return this.sv.data.Read.Byte(offset + 0x1D); }
+                }
+                public byte Move2_PP
+                {
+                    get { return this.sv.data.Read.Byte(offset + 0x1E); }
+                }
+                public byte Move3_PP
+                {
+                    get { return this.sv.data.Read.Byte(offset + 0x1F); }
+                }
+                public byte Move4_PP
+                {
+                    get { return this.sv.data.Read.Byte(offset + 0x20); }
+                }
+                public ushort MaximumHP
+                {
+                    get { return this.sv.data.Read.Ushort(offset + 0x22); }
+                }
+                public ushort Attack
+                {
+                    get { return this.sv.data.Read.Ushort(offset + 0x24); }
+                }
+                public ushort Defence
+                {
+                    get { return this.sv.data.Read.Ushort(offset + 0x24); }
+                }
+                public ushort Speed
+                {
+                    get { return this.sv.data.Read.Ushort(offset + 0x28); }
+                }
+                public ushort Special
+                {
+                    get { return this.sv.data.Read.Ushort(offset + 0x2A); }
+                }
+                public string Nickname
+                {
+                    get { return this.sv.data.Read.String(0x2F2C + 0x110 + 0x42 + (no * 0xB), 0xB); }
+                }
+                public string TrainerName
+                {
+                    get { return this.sv.data.Read.String(0x2F2C + 0x110 + (no * 0xB), 0xB); }
+                }
+                SaveFile sv;
+                internal uint no;
+                internal PartyPokemonClass(SaveFile sv,uint no) { this.sv = sv; this.no = no; }
             }
         }
 

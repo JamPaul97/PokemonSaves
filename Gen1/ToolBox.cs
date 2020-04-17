@@ -101,6 +101,12 @@ namespace Gen1
             Push(ref bytes, 0x50);
             return bytes;
         }
+        public static ushort ReadUshort(this byte[] bt,uint offset)
+        {
+            var temp = bt.Sub(offset, 2);
+            Array.Reverse(temp);
+            return BitConverter.ToUInt16(temp,0);
+        }
         
     }
     public static class BitManipulator
