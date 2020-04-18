@@ -474,7 +474,7 @@ namespace Tests
             var b = new Gen1.Save.SaveFile(@"A:\Desktop\Pokemon Red.sav");
             var c = b.PCStorageBank.checkSum1();
             var dd = b.PCStorageBank.ChecksumWhole2;
-            var cc = b.PCStorageBank[5][1].Level;
+            var cc = b.PCStorageBank[5][1].Move2;
             
             //var aa = BitConverter.ToUInt16(c, 0x01);
          }
