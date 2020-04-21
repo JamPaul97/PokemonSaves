@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
+using System.Drawing;
+using System.IO;
 namespace Gen1
 {
     public enum Region
@@ -175,5 +176,17 @@ namespace Gen1
             return result;
         }
 
+    }
+    public static class ImageBase64
+    {
+        public static Image FromBase64(this string img)
+        {
+            Image image;
+            using (MemoryStream ms = new MemoryStream(Convert.FromBase64String(img)))
+            {
+                image = Image.FromStream(ms);
+            }
+            return image;
+        }
     }
 }

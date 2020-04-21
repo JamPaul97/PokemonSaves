@@ -27,6 +27,5 @@ namespace Gen3
             }
             return arr;
         }
-
     }
 }

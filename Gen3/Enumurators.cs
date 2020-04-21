@@ -11,21 +11,17 @@ namespace Gen3
         Male = 0x00,
         Female = 0x01
     }
-    public enum ButtonSet
-    {
-        Normal =0x01,
-        LR = 0x02,
-        LA = 0x03
-    }
     public enum ButtonMode
     {
-        Normal = 0x01,
-        LR = 0x02,
-        LA = 0x03
+        Normal = 0,
+        LR = 1,
+        LA = 2
     }
     public enum TextSpeed
     {
-        Slow,Medium,Fast
+        Slow = 0b00000000,
+        Medium = 0b00000001,
+        Fast = 0b00000010
     }
     public enum Sound
     {
@@ -40,7 +36,7 @@ namespace Gen3
     {
         On,Off
     }
-    public enum Game
+    public enum Version
     {
         RS,FL,E
     }
@@ -58,5 +54,38 @@ namespace Gen3
         German      = 0x205,
         Korean      = 0x206,
         Spanish     = 0x207
+    }
+    public enum Ball
+    {
+        MasterBall = 1,
+        UltraBall = 2,
+        GreatBall = 3,
+        PokeBall = 4,
+        SafariBall = 5,
+        NetBall = 6,
+        DiveBall = 7,
+        NestBall = 8,
+        RepeatBall = 9,
+        TimerBall = 10,
+        LuxuryBall = 11,
+        PremierBall = 12
+    }
+    public enum GameOfOrigin
+    {
+        ColosseumB = 0,
+        Sapphire = 1,
+        Ruby = 2,
+        Emerald = 3,
+        FireRed = 4,
+        LeafGreen = 5,
+        ColosseumXD = 15
+    }
+    public enum ContestRibbon
+    {
+        None = 0,
+        Norma = 1,
+        Super = 2,
+        Hyper = 3,
+        Master = 4
     }
 }

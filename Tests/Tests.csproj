@@ -92,6 +92,14 @@
       <Project>{1ad8cc35-99dd-4a73-a15e-e0617b0a915a}</Project>
       <Name>Gen3</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Gen4\Gen4.csproj">
+      <Project>{eedb6968-be56-4559-8b8e-23c73b617793}</Project>
+      <Name>Gen4</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\PokeAPI\PokeAPI.csproj">
+      <Project>{17b2f6a7-d7d0-40e4-a252-1dff04d3c412}</Project>
+      <Name>PokeAPI</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Toolbox\Toolbox.csproj">
       <Project>{affb0ac8-dab5-4900-ad7c-55f0adb93e2b}</Project>
       <Name>Toolbox</Name>

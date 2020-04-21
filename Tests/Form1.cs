@@ -1,17 +1,6 @@
 ﻿using System;
-using Toolbox;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Gen3;
 using System.Windows.Forms;
-using System.IO;
-using System.Net;
-using HtmlAgilityPack;
 namespace Tests
 {
     public partial class Form1 : Form
@@ -471,41 +460,11 @@ namespace Tests
         List<ushort> aa = new List<ushort>();
         private void button1_Click(object sender, EventArgs e)
         {
-            var b = new Gen1.Save.SaveFile(@"A:\Desktop\Pokemon Red.sav");
-            var c = b.PCStorageBank.checkSum1();
-            var dd = b.PCStorageBank.ChecksumWhole2;
-            var cc = b.PCStorageBank[5][1].Move2;
-            
-            //var aa = BitConverter.ToUInt16(c, 0x01);
-         }
-        private void listBox1_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            //pictureBox1.Image = Gen3.Data.Data.Items[aa[listBox1.SelectedIndex]].Image;
-        }
-        public System.Drawing.Image GetImageFromURL( string url)
-        {
-            try
+            var b = PokeAPI.WebConnector.Request("https://pokeapi.co/api/v2/evolution-chain", new System.Collections.Specialized.NameValueCollection()
             {
-                var request = WebRequest.Create(url);
-                using (var response = request.GetResponse())
-                using (var stream = response.GetResponseStream())
-                {
-                    return System.Drawing.Bitmap.FromStream(stream);
-                }
-            }
-            catch
-            {
-                throw new Exception();
-            }
-        }
-        public string ToBase( Image value)
-        {
-            using (MemoryStream m = new MemoryStream())
-            {
-                value.Save(m, value.RawFormat);
-                byte[] imageBytes = m.ToArray();
-                return Convert.ToBase64String(imageBytes);
-            }
+                {"limit","60" },
+                {"start","50" }
+            });
         }
 
     }

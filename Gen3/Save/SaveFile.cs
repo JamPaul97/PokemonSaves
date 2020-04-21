@@ -3,1067 +3,458 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using System.IO;
 using Toolbox;
 namespace Gen3.Save
 {
     public class SaveFile
     {
-        internal readonly uint Size = 57344 + 57344 + 8192 + 4096 + 4096;
-        private uint GameSaveAStart         = 0x000000;
-        private uint GameSaveASize          = 57344;
-        private uint GameSaveBStart         = 0x00E000;
-        private uint GameSaveBSize          = 57344;
-        private uint HoFStart               = 0x01C000;
-        private uint HoFSize                = 8192;
-        private uint MysteryGiftStart       = 0x01E000;
-        private uint MysteryGiftSize        = 4096;
-        private uint RecorderBattleStart    = 0x01F000;
-        private uint RecorderBattleSize     = 4096;
-        internal byte[] Data;
-        public byte[] GameSaveAData
-        {
-            get { return this.Data.Sub(GameSaveAStart, GameSaveASize); }
-            set { if (value.Length != GameSaveASize) throw new FormatException("Given array for GameSaveA is not in the corrent Format");
-                this.Data.Update(GameSaveAStart, value);
-                }
-        }
-        public byte[] GameSaveBData
-        {
-            get { return this.Data.Sub(GameSaveBStart, GameSaveBSize); }
-            set
-            {
-                if (value.Length != GameSaveBSize) throw new FormatException("Given array for GameSaveB is not in the corrent Format");
-                this.Data.Update(GameSaveBStart, value);
-            }
-        }
-        public byte[] HoFData
-        {
-            get { return this.Data.Sub(HoFStart, HoFSize); }
-            set
-            {
-                if (value.Length != HoFSize) throw new FormatException("Given array for HoF is not in the corrent Format");
-                this.Data.Update(HoFStart, value);
-            }
-        }
-        public byte[] MysteryGiftData
-        {
-            get { return this.Data.Sub(MysteryGiftStart, MysteryGiftSize); }
-            set
-            {
-                if (value.Length != MysteryGiftSize) throw new FormatException("Given array for MysteryGift is not in the corrent Format");
-                this.Data.Update(MysteryGiftStart, value);
-            }
-        }
-        public byte[] RecorderBattleData
-        {
-            get { return this.Data.Sub(RecorderBattleStart, RecorderBattleSize); }
-            set
-            {
-                if (value.Length != RecorderBattleSize) throw new FormatException("Given array for MysteryGift is not in the corrent Format");
-                this.Data.Update(RecorderBattleStart, value);
-            }
-        }
-        public GameSave GameSaveA;
-        public GameSave GameSaveB;
-        public SaveFile(string FileName)
-        {
-            byte[] temp = File.ReadAllBytes(FileName);
-            if (temp.Length != this.Size)
-                throw new Exception("The given file is not a valid RB/E/LF Save File");
-            this.Data = temp;
-            Initialize();
-        }
-        public PlayerClass Player;
-        public OptionsClass Options;
-        public PCBoxClass PCBoxes;
-        public PokedexClass Pokedex;
-        public HoFClass HallOfFame;
-        public class HoFClass
-        {
-            SaveFile sv;
-            internal HoFEntry[] entries;
+        internal static uint SizeNormal = 128 * 1024;    //File Size as Dectiated
+        internal static uint SizeLow = 120 * 1024; //Lower File Size limit
+        internal static uint SizeHigh = 145 * 1024;//Upper File Size limit
+        internal Data data;
+        internal string FileName;
+        internal GameSave GameSaveA;
+        internal GameSave GameSaveB;
 
-            internal HoFClass(SaveFile sv) { this.sv = sv; this.entries = new HoFEntry[50];
-                for (uint i = 0; i < 50; i++)
-                {
-                    this.entries[i] = new HoFEntry(sv, i);
-                }
-            }
-            public HoFEntry this[uint index]
-            {
-                get { return this.entries[index]; }
-            }
 
-            public class HoFEntry
-            {
-                SaveFile sv;
-                internal byte[] bytes
-                {
-                    get { return this.sv.HoFData.Sub(no * 120, 120); }
-                }
-                internal uint no;
-                public PokemonEntry this[int index]
-                {
-                    get { return this.pkms[index]; }
-                }
-                internal PokemonEntry[] pkms;
-                internal HoFEntry(SaveFile sv,uint number) { this.sv = sv; this.no = number;
-                    this.pkms = new PokemonEntry[6];
-                    for (uint i = 0; i < 6; i++)
-                        this.pkms[i] = new PokemonEntry(this, i);
-                }
-                public class PokemonEntry
-                {
-                    HoFEntry sv;
-                    uint number;
-                    public bool HasEntry
-                    {
-                        get { return !(this.sv.bytes[0] == 0 || this.sv.bytes[1] == 0 || this.sv.bytes[2] == 0); }
-                    }
-                    public uint TrainerID
-                    {
-                        get { return BitConverter.ToUInt32(this.sv.bytes, (20 * (int)number)); }
-                        set { throw new NotImplementedException(); }
-                    }
-                    public uint Personality
-                    {
-                        get { return BitConverter.ToUInt32(this.sv.bytes, (20 * (int)number) + 4); }
-                        set { throw new NotImplementedException(); }
-                    }
-                    public ushort Species
-                    {
-                        get
-                        {
-                            var byteh = this.sv.bytes[(20 * number) + 0x0008];
-                            var bytel = this.sv.bytes[(20 * number) + 0x0009];
-                            return (ushort)(byteh + ((bytel.GetBit(0) == true ? (byte)0x1 : (byte)0x0) << 8));
-                        }
-                        set { throw new NotImplementedException(); }
-                    }
-                    public byte Level
-                    {
-                        get { return (byte)(this.sv.bytes[(20 * number) + 0x0009] >> 1); }
-                        set { throw new NotImplementedException(); }
-                    }
-                    public string Nickname
-                    {
-                        get { return this.sv.bytes.Sub((20 * number) + 0x000A, 10).Decode(); }
-                        set { throw new NotImplementedException(); }
-                    }
-                    public PokemonEntry(HoFEntry sv,uint number) { this.sv = sv; this.number = number; }
-                }
-            }
 
-        }
-        public class PokedexClass
+        internal GameSave.TrainerInfoClass TrainerInfo;
+        internal GameSave.TeamItemsClass TeamItems;
+        internal GameSave.PCBufferClass[] PCBuffers;
+        internal GameSave.PCPokemonsClass _PCPokemons;
+
+        public GameSave.TeamItemsClass _TeamItems { get { return this.TeamItems; } }
+        public GameSave.TrainerInfoClass _TrainerInfo { get { return this.TrainerInfo; } }
+        public GameSave.PCPokemonsClass PCPokemons { get { return this._PCPokemons; } }
+        public SaveFile(string filename)
         {
-            SaveFile sv;
-            public SeenClass Seen;
-            public OnwedClass Onwed;
-            internal byte[] PokedexSeenA
-            {
-                get { return this.sv.GameSaveA.sections[0].wholeData.Sub(0x005C, 49); }
-            }
-            public class OnwedClass
-            {
-                SaveFile sv;
-                public bool this[uint PokemonID]
-                {
-
-                    get
-                    {
-                        if (PokemonID > 277)
-                            PokemonID -= 25;
-                        var ByteIndex = (uint)(PokemonID / 8);
-                        var BitIndex = (uint)(PokemonID % 8);
-                        return this.sv.GameSaveA.sections[0].wholeData[0x0028 + ByteIndex].GetBit(BitIndex);
-                    }
-                    set
-                    {
-                        if (PokemonID > 277)
-                            PokemonID -= 25;
-                        var ByteIndex = (uint)(PokemonID / 8);
-                        var BitIndex = (uint)(PokemonID % 8);
-                        this.sv.GameSaveA.sections[0].wholeData[0x0028 + ByteIndex].SetBit(BitIndex, value);
-                    }
-                }
-                internal OnwedClass(SaveFile sv) { this.sv = sv; }
-            }
-            public class SeenClass
-            {
-
-                internal Dictionary<Game, uint> A = new Dictionary<Game, uint>()
-                {
-                    {Game.E, 0x005C },
-                    {Game.RS, 0x005C },
-                    {Game.FL, 0x005C }
-                };
-                internal Dictionary<Game, uint> B = new Dictionary<Game, uint>()
-                {
-                    {Game.E, 0x0988 },
-                    {Game.RS, 0x0938 },
-                    {Game.FL, 0x05F8 }
-                };
-                internal Dictionary<Game, uint> C = new Dictionary<Game, uint>()
-                {
-                    {Game.E, 0x0CA4 },
-                    {Game.RS, 0x0C0C },
-                    {Game.FL, 0x0B98 }
-                };
-                SaveFile sv;
-                public bool this[uint PokemonID]
-                {
-                    
-                    get 
-                    {
-                        if (PokemonID > 277)
-                            PokemonID -= 25;
-                        var ByteIndex = (uint)(PokemonID / 8);
-                        var BitIndex = (uint)(PokemonID % 8);
-                        return this.sv.GameSaveA.sections[0].wholeData[A[this.sv.GameType] + ByteIndex].GetBit(BitIndex);
-                    }
-                    set 
-                    {
-                        if (PokemonID > 277)
-                            PokemonID -= 25;
-                        var ByteIndex = (uint)(PokemonID / 8);
-                        var BitIndex = (uint)(PokemonID % 8);
-                        this.sv.GameSaveA.sections[0].wholeData[A[this.sv.GameType] + ByteIndex].SetBit(BitIndex, value);
-                        this.sv.GameSaveA.sections[1].wholeData[B[this.sv.GameType] + ByteIndex].SetBit(BitIndex, value);
-                        this.sv.GameSaveA.sections[4].wholeData[C[this.sv.GameType] + ByteIndex].SetBit(BitIndex, value);
-
-                    }
-                }
-                internal SeenClass(SaveFile sv) { this.sv = sv; }
-            }
-            internal PokedexClass(SaveFile sv) { this.sv = sv; this.Seen = new SeenClass(sv); this.Onwed = new OnwedClass(sv); }
-            
-        }
-        public class PlayerClass
-        {
-            internal SaveFile sv;
-            internal PlayerClass(SaveFile sv)
-            {
-                this.sv = sv;
-            }
-            public string Name
-            {
-                get { return sv.GameSaveA.sections[0].wholeData.Sub(0x0000, 7).Decode(); }
-                set { throw new NotImplementedException(); }
-            }
-            public Gender Gender
-            {
-                get { return (Gender)sv.GameSaveA.sections[0].wholeData.Sub(0x0008, 1)[0]; }
-                set { throw new NotImplementedException(); }
-            }
-            public uint TrainerID
-            {
-                get { return BitConverter.ToUInt32(sv.GameSaveA.sections[0].wholeData, 0x000A); }
-            }
-            public ushort PublicID
-            {
-                get { return BitConverter.ToUInt16(BitConverter.GetBytes(this.TrainerID), 0); }
-                set { throw new NotImplementedException(); }
-            }
-            public ushort SecretID
-            {
-                get { return BitConverter.ToUInt16(BitConverter.GetBytes(this.TrainerID), 2); }
-                set { throw new NotImplementedException(); }
-            }
-            public ushort HoursPlayed
-            {
-                get { return BitConverter.ToUInt16(this.sv.GameSaveA.sections[0].wholeData, 0x000E); }
-                set { throw new NotImplementedException(); }
-            }
-            public byte MinutesPlayed
-            {
-                get { return this.sv.GameSaveA.sections[0].wholeData[0x0010]; }
-                set { throw new NotImplementedException(); }
-            }
-            public byte SecondsPlayed
-            {
-                get { return this.sv.GameSaveA.sections[0].wholeData[0x0011]; }
-                set { throw new NotImplementedException(); }
-            }
-            public byte FramesPlayer
-            {
-                get { return this.sv.GameSaveA.sections[0].wholeData[0x0012]; }
-                set { this.sv.GameSaveA.sections[0].wholeData[0x0012] = value ; }//asdasdasdasdasd
-            }
-            public uint Money
-            {
-                get 
-                {
-                    if (this.sv.GameType == Game.FL)
-                        return(uint)(BitConverter.ToInt32(this.sv.GameSaveA.sections[1].wholeData, 0x0290) ^ this.sv.SecurityKey);
-                    else return (uint)(BitConverter.ToInt32(this.sv.GameSaveA.sections[1].wholeData, 0x0490) ^ this.sv.SecurityKey);
-                }
-                set { throw new NotImplementedException(); }
-            }
-            public ushort Coins
-            {
-                get
-                {
-                    if (this.sv.GameType == Game.FL)
-                        return (ushort)(BitConverter.ToInt16(this.sv.GameSaveA.sections[1].wholeData, 0x0294) ^ this.sv.SecurityKey);
-                    else return (ushort)(BitConverter.ToInt16(this.sv.GameSaveA.sections[1].wholeData, 0x0494) ^ this.sv.SecurityKey);
-                }
-                set { throw new NotImplementedException(); }
-            }
-            public uint TeamSize
-            {
-                get
-                {
-                    if (this.sv.GameType == Game.FL)
-                        return (uint)(BitConverter.ToInt16(this.sv.GameSaveA.sections[1].wholeData, 0x034));
-                    else return (uint)(BitConverter.ToInt16(this.sv.GameSaveA.sections[1].wholeData, 0x0234));
-                }
-                set { throw new NotImplementedException(); }
-            }
-            public Pokemon Pokemon1
-            {
-                get { return new Pokemon(this.sv,0); }
-                set { this.Pokemon1 = value; }
-            }
-            public Pokemon Pokemon2
-            {
-                get { return new Pokemon(this.sv, 1); }
-                set { this.Pokemon2 = value; }
-            }
-            public Pokemon Pokemon3
-            {
-                get { return new Pokemon(this.sv, 2); }
-                set { this.Pokemon3 = value; }
-            }
-            public Pokemon Pokemon4
-            {
-                get { return new Pokemon(this.sv, 3); }
-                set { this.Pokemon4 = value; }
-            }
-            public Pokemon Pokemon5
-            {
-                get { return new Pokemon(this.sv, 4); }
-                set { this.Pokemon5 = value; }
-            }
-            public Pokemon Pokemon6
-            {
-                get { return new Pokemon(this.sv, 5); }
-                set { this.Pokemon6 = value; }
-            }
-            public Dictionary<ushort,ushort> PCItems
-            {
-                get 
-                {
-                    Dictionary<ushort, ushort> result = new Dictionary<ushort, ushort>();
-                    var start = this.sv.GameType == Game.FL ? 0x0298 : 0x0498;
-                    var size = this.sv.GameType == Game.FL ? 120 : 200;
-                    for (int i = start; i < start + size; i += 4)
-                    {
-                        ushort tt = (BitConverter.ToUInt16(this.sv.GameSaveA.sections[1].wholeData, start + (((i - start) / 4) * 4)+0));
-                        ushort bb = (BitConverter.ToUInt16(this.sv.GameSaveA.sections[1].wholeData, start + (((i - start) / 4) * 4) + 2));
-                        result.Add(tt, bb);
-                    } 
-                    return result;
-                }
-            }
-            public Dictionary<ushort, ushort> Items
-            {
-                get
-                {
-                    Dictionary<ushort, ushort> result = new Dictionary<ushort, ushort>();
-                    var start = this.sv.GameType == Game.FL ? 0x0310 : 0x0560;
-                    var size = this.sv.GameType == Game.FL ? 168 : this.sv.GameType == Game.RS ? 80 : 120;
-                    for (int i = start; i < start + size; i += 4)
-                    {
-                        ushort tt = (BitConverter.ToUInt16(this.sv.GameSaveA.sections[1].wholeData, start + (((i - start) / 4) * 4) + 0));
-                        ushort bb = (BitConverter.ToUInt16(this.sv.GameSaveA.sections[1].wholeData, start + (((i - start) / 4) * 4) + 2));
-                        if (tt == 0)
-                            break;
-                        if (this.sv.GameType != Game.RS)
-                            bb = (ushort)(bb ^ (this.sv.SecurityKey & 0b00000000000000001111111111111111));
-                        if (result.ContainsKey(tt))
-                            result[tt] += bb;
-                        else result.Add(tt, bb);
-                    }
-                    return result;
-                }
-            }
-            public Dictionary<ushort, ushort> KeyItems
-            {
-                get
-                {
-                    Dictionary<ushort, ushort> result = new Dictionary<ushort, ushort>();
-                    var start = this.sv.GameType == Game.FL ? 0x03b8 : this.sv.GameType == Game.RS ? 0x05B0 : 0x05D8;
-                    var size = this.sv.GameType == Game.FL ? 120 : this.sv.GameType == Game.RS ? 80 : 120;
-                    for (int i = start; i < start + size; i += 4)
-                    {
-                        ushort tt = (BitConverter.ToUInt16(this.sv.GameSaveA.sections[1].wholeData, start + (((i - start) / 4) * 4) + 0));
-                        ushort bb = (BitConverter.ToUInt16(this.sv.GameSaveA.sections[1].wholeData, start + (((i - start) / 4) * 4) + 2));
-                        if (tt == 0)
-                            break;
-                        if (this.sv.GameType != Game.RS)
-                            bb = (ushort)(bb ^ (this.sv.SecurityKey & 0b00000000000000001111111111111111));
-                        if (result.ContainsKey(tt))
-                            result[tt] += bb;
-                        else result.Add(tt, bb);
-                    }
-                    return result;
-                }
-            }
-            public Dictionary<ushort, ushort> Balls
-            {
-                get
-                {
-                    Dictionary<ushort, ushort> result = new Dictionary<ushort, ushort>();
-                    var start = this.sv.GameType == Game.FL ? 0x0430 : this.sv.GameType == Game.RS ? 0x0600 : 0x0650;
-                    var size = this.sv.GameType == Game.FL ? 52 : this.sv.GameType == Game.RS ? 64 : 64;
-                    for (int i = start; i < start + size; i += 4)
-                    {
-                        ushort tt = (BitConverter.ToUInt16(this.sv.GameSaveA.sections[1].wholeData, start + (((i - start) / 4) * 4) + 0));
-                        ushort bb = (BitConverter.ToUInt16(this.sv.GameSaveA.sections[1].wholeData, start + (((i - start) / 4) * 4) + 2));
-                        if (tt == 0)
-                            break;
-                        if (this.sv.GameType != Game.RS)
-                            bb = (ushort)(bb ^ (this.sv.SecurityKey & 0b00000000000000001111111111111111));
-                        if (result.ContainsKey(tt))
-                            result[tt] += bb;
-                        else result.Add(tt, bb);
-                    }
-                    return result;
-                }
-            }
-            public Dictionary<ushort, ushort> TMs
-            {
-                get
-                {
-                    Dictionary<ushort, ushort> result = new Dictionary<ushort, ushort>();
-                    var start = this.sv.GameType == Game.FL ? 0x00464 : this.sv.GameType == Game.RS ? 0x0640 : 0x0690;
-                    var size = this.sv.GameType == Game.FL ? 232 : this.sv.GameType == Game.RS ? 256 : 256;
-                    for (int i = start; i < start + size; i += 4)
-                    {
-                        ushort tt = (BitConverter.ToUInt16(this.sv.GameSaveA.sections[1].wholeData, start + (((i - start) / 4) * 4) + 0));
-                        ushort bb = (BitConverter.ToUInt16(this.sv.GameSaveA.sections[1].wholeData, start + (((i - start) / 4) * 4) + 2));
-                        if (this.sv.GameType != Game.RS)
-                            bb = (ushort)(bb ^ (this.sv.SecurityKey & 0b00000000000000001111111111111111));
-                        if (result.ContainsKey(tt))
-                            result[tt] += bb;
-                        else result.Add(tt, bb);
-                    }
-                    return result;
-                }
-            }
-            public Dictionary<ushort, ushort> Berries
-            {
-                get
-                {
-                    Dictionary<ushort, ushort> result = new Dictionary<ushort, ushort>();
-                    var start = this.sv.GameType == Game.FL ? 0x054C : this.sv.GameType == Game.RS ? 0x0740 : 0x0790;
-                    var size = this.sv.GameType == Game.FL ? 172 : this.sv.GameType == Game.RS ? 184 : 184;
-                    for (int i = start; i < start + size; i += 4)
-                    {
-                        ushort tt = (BitConverter.ToUInt16(this.sv.GameSaveA.sections[1].wholeData, start + (((i - start) / 4) * 4) + 0));
-                        ushort bb = (BitConverter.ToUInt16(this.sv.GameSaveA.sections[1].wholeData, start + (((i - start) / 4) * 4) + 2));
-                        if (this.sv.GameType != Game.RS)
-                            bb = (ushort)(bb ^ (this.sv.SecurityKey & 0b00000000000000001111111111111111));
-                        if (result.ContainsKey(tt))
-                            result[tt] += bb;
-                        else result.Add(tt, bb);
-                    }
-                    return result;
-                }
-            }
-
-            
-            public class Pokemon
-            {
-                public virtual uint Personality
-                {
-                    get { return BitConverter.ToUInt32(this.sv.GameSaveA.sections[1].wholeData, (int)(start + (100 * number))); }
-                    set { this.sv.GameSaveA.sections[1].wholeData.Update((uint)(start + (100 * number)),value); }
-                }
-                public uint OTID
-                {
-                    get { return BitConverter.ToUInt32(this.sv.GameSaveA.sections[1].wholeData, (int)(start + (100 * number)+4)); }
-                    set { this.sv.GameSaveA.sections[1].wholeData.Update((uint)(start + (100 * number)+4), value); }
-                }
-                public string Nickaname
-                {
-                    get { return this.sv.GameSaveA.sections[1].wholeData.Sub((start + (100 * number) + 8),10).Decode(jp: (this.Language == Language.Japanese)); }
-                    set { this.sv.GameSaveA.sections[1].wholeData.Update((start + (100 * number) + 8), value,10); }
-                }
-                public Language Language
-                {
-                    get { return (Language)BitConverter.ToUInt16(this.sv.GameSaveA.sections[1].wholeData, (int)(start + (100 * number) + 18)); }
-                    set { this.sv.GameSaveA.sections[1].wholeData.Update((uint)(start + (100 * number) + 18), (uint)value); }
-                }
-                public string OTName
-                {
-                    get { return this.sv.GameSaveA.sections[1].wholeData.Sub((start + (100 * number) + 20), 7).Decode(jp: (this.Language == Language.Japanese)); }
-                    set { this.sv.GameSaveA.sections[1].wholeData.Update((start + (100 * number) + 20), value, 7); }
-                }
-                public Marking Markings
-                {
-                    get { return (Marking)this.sv.GameSaveA.sections[1].wholeData[start + (100 * number) + 27]; }
-                    set { this.sv.GameSaveA.sections[1].wholeData[start + (100 * number) + 27] = (byte)value; }
-                }
-                public ushort Checksum
-                {
-                    get { return BitConverter.ToUInt16(this.sv.GameSaveA.sections[1].wholeData, (int)(start + (100 * number) + 28)); }
-                    set { this.sv.GameSaveA.sections[1].wholeData.Update((uint)(start + (100 * number) + 28), value); }
-                }
-                public byte Level
-                {
-                    get { return this.sv.GameSaveA.sections[1].wholeData[start + (100 * number) + 84]; }
-                    set { this.sv.GameSaveA.sections[1].wholeData[start + (100 * number) + 84] = value; }
-                }
-                public byte Pokerus
-                {
-                    get { return this.sv.GameSaveA.sections[1].wholeData[start + (100 * number) + 85]; }
-                    set { this.sv.GameSaveA.sections[1].wholeData[start + (100 * number) + 85] = value; }
-                }
-                public ushort CurrentHP
-                {
-                    get { return BitConverter.ToUInt16(this.sv.GameSaveA.sections[1].wholeData, (int)(start + (100 * number) + 86)); }
-                    set { this.sv.GameSaveA.sections[1].wholeData.Update((uint)(start + (100 * number) + 86), value); }
-                }
-                public ushort TotalHP
-                {
-                    get { return BitConverter.ToUInt16(this.sv.GameSaveA.sections[1].wholeData, (int)(start + (100 * number) + 88)); }
-                    set { this.sv.GameSaveA.sections[1].wholeData.Update((uint)(start + (100 * number) + 88), value); }
-                }
-                public ushort Attack
-                {
-                    get { return BitConverter.ToUInt16(this.sv.GameSaveA.sections[1].wholeData, (int)(start + (100 * number) + 90)); }
-                    set { this.sv.GameSaveA.sections[1].wholeData.Update((uint)(start + (100 * number) + 90), value); }
-                }
-                public ushort Defense
-                {
-                    get { return BitConverter.ToUInt16(this.sv.GameSaveA.sections[1].wholeData, (int)(start + (100 * number) + 92)); }
-                    set { this.sv.GameSaveA.sections[1].wholeData.Update((uint)(start + (100 * number) + 92), value); }
-                }
-                public ushort Speed
-                {
-                    get { return BitConverter.ToUInt16(this.sv.GameSaveA.sections[1].wholeData, (int)(start + (100 * number) + 94)); }
-                    set { this.sv.GameSaveA.sections[1].wholeData.Update((uint)(start + (100 * number) + 94), value); }
-                }
-                public ushort SPAttack
-                {
-                    get { return BitConverter.ToUInt16(this.sv.GameSaveA.sections[1].wholeData, (int)(start + (100 * number) + 86)); }
-                    set { this.sv.GameSaveA.sections[1].wholeData.Update((uint)(start + (100 * number) + 86), value); }
-                }
-                public ushort SPDefence
-                {
-                    get { return BitConverter.ToUInt16(this.sv.GameSaveA.sections[1].wholeData, (int)(start + (100 * number) + 98)); }
-                    set { this.sv.GameSaveA.sections[1].wholeData.Update((uint)(start + (100 * number) + 98), value); }
-                }
-                public PokemonData Data
-                {
-                    get { return new PokemonData(this); }
-                }
-                public byte[] EncryptedData
-                {
-                    get { return this.sv.GameSaveA.sections[1].wholeData.Sub((uint)(start + (100 * number) + 32), 48); }
-                }
-                internal SaveFile sv;
-                internal uint number;
-                internal uint start;
-                public class PokemonData
-                {
-                    internal List<List<string>> dd = new List<List<string>>
-                    {
-                        new List<string>(){"G","A","E","M"},
-                        new List<string>(){"G","A","M","E"},
-                        new List<string>(){"G","E","A","M"},
-                        new List<string>(){"G","E","M","A"},
-                        new List<string>(){"G","M","A","E"},
-                        new List<string>(){"G","M","E","A"},
-                        new List<string>(){"A","G","E","M"},
-                        new List<string>(){"A","G","M","E"},
-                        new List<string>(){"A","E","G","M"},
-                        new List<string>(){"A","E","M","G"},
-                        new List<string>(){"A","M","G","E"},
-                        new List<string>(){"A","M","E","G"},
-                        new List<string>(){"E","G","A","M"},
-                        new List<string>(){"E","G","M","A"},
-                        new List<string>(){"E","A","G","M"},
-                        new List<string>(){"E","A","M","G"},
-                        new List<string>(){"E","M","G","A"},
-                        new List<string>(){"E","M","A","G"},
-                        new List<string>(){"M","G","A","E"},
-                        new List<string>(){"M","G","E","A"},
-                        new List<string>(){"M","A","G","E"},
-                        new List<string>(){"M","A","E","G"},
-                        new List<string>(){"M","E","G","A"},
-                        new List<string>(){"M","E","A","G"},
-                    };
-                    internal byte[] Growth
-                    {
-                        get { return this.sv.EncryptedData.Sub((uint)dd[this.Modulo].IndexOf("G") * 12, 12); }
-                    }
-                    internal byte[] Attacks
-                    {
-                        get { return this.sv.EncryptedData.Sub((uint)dd[this.Modulo].IndexOf("A") * 12, 12); }
-                    }
-                    internal byte[] EVs
-                    {
-                        get { return this.sv.EncryptedData.Sub((uint)dd[this.Modulo].IndexOf("E") * 12, 12); }
-                    }
-                    internal byte[] Misc
-                    {
-                        get { return this.sv.EncryptedData.Sub((uint)dd[this.Modulo].IndexOf("M") * 12, 12); }
-                    }
-                    internal Pokemon sv;
-                    public ushort Species
-                    {
-                        get { return BitConverter.ToUInt16((BitConverter.ToUInt32(this.Growth, 0) ^ DecryprionKey).GetBytes(),0); }
-                    }
-                    public ushort HeldItem
-                    {
-                        get { return BitConverter.ToUInt16((BitConverter.ToUInt32(this.Growth, 0) ^ DecryprionKey).GetBytes(), 2); }
-                    }
-                    public uint Experience
-                    {
-                        get { return BitConverter.ToUInt32(this.Growth, 4) ^ DecryprionKey; }
-                    }
-                    public byte PPBonuses
-                    {
-                        get { return (BitConverter.ToUInt32(this.Growth, 8) ^ DecryprionKey).GetBytes()[0]; }
-                    }
-                    public byte Friendship
-                    {
-                        get { return (BitConverter.ToUInt32(this.Growth, 8) ^ DecryprionKey).GetBytes()[1]; }
-                    }
-                    public ushort Move1
-                    {
-                        get { return BitConverter.ToUInt16((BitConverter.ToUInt32(this.Attacks, 0) ^ DecryprionKey).GetBytes(), 0); }
-                    }
-                    public ushort Move2
-                    {
-                        get { return BitConverter.ToUInt16((BitConverter.ToUInt32(this.Attacks, 0) ^ DecryprionKey).GetBytes(), 2); }
-                    }
-                    public ushort Move3
-                    {
-                        get { return BitConverter.ToUInt16((BitConverter.ToUInt32(this.Attacks, 4) ^ DecryprionKey).GetBytes(), 0); }
-                    }
-                    public ushort Move4
-                    {
-                        get { return BitConverter.ToUInt16((BitConverter.ToUInt32(this.Attacks, 4) ^ DecryprionKey).GetBytes(), 2); }
-                    }
-                    public byte PP1
-                    {
-                        get { return (BitConverter.ToUInt32(this.Attacks, 8) ^ DecryprionKey).GetBytes()[0]; }
-                    }
-                    public byte PP2
-                    {
-                        get { return (BitConverter.ToUInt32(this.Attacks, 8) ^ DecryprionKey).GetBytes()[1]; }
-                    }
-                    public byte PP3
-                    {
-                        get { return (BitConverter.ToUInt32(this.Attacks, 8) ^ DecryprionKey).GetBytes()[2]; }
-                    }
-                    public byte PP4
-                    {
-                        get { return (BitConverter.ToUInt32(this.Attacks, 8) ^ DecryprionKey).GetBytes()[3]; }
-                    }
-                    public byte HP_EV { get { return (BitConverter.ToUInt32(this.EVs, 0) ^ DecryprionKey).GetBytes()[0]; } }
-                    public byte Attack_EV { get { return (BitConverter.ToUInt32(this.EVs, 0) ^ DecryprionKey).GetBytes()[1]; } }
-                    public byte Defence_EV { get { return (BitConverter.ToUInt32(this.EVs, 0) ^ DecryprionKey).GetBytes()[2]; } }
-                    public byte Speed_EV { get { return (BitConverter.ToUInt32(this.EVs, 0) ^ DecryprionKey).GetBytes()[3]; } }
-                    public byte SPAttack_EV { get { return (BitConverter.ToUInt32(this.EVs, 4) ^ DecryprionKey).GetBytes()[0]; } }
-                    public byte SPDefence_EV { get { return (BitConverter.ToUInt32(this.EVs, 4) ^ DecryprionKey).GetBytes()[1]; } }
-                    public byte Coolness_EV { get { return (BitConverter.ToUInt32(this.EVs, 4) ^ DecryprionKey).GetBytes()[2]; } }
-                    public byte Beauty_EV { get { return (BitConverter.ToUInt32(this.EVs, 4) ^ DecryprionKey).GetBytes()[3]; } }
-                    public byte Cuteness_EV { get { return (BitConverter.ToUInt32(this.EVs, 8) ^ DecryprionKey).GetBytes()[0]; } }
-                    public byte Smartness_EV { get { return (BitConverter.ToUInt32(this.EVs, 8) ^ DecryprionKey).GetBytes()[1]; } }
-                    public byte Toughness_EV { get { return (BitConverter.ToUInt32(this.EVs, 8) ^ DecryprionKey).GetBytes()[2]; } }
-                    public byte Feel_EV { get { return (BitConverter.ToUInt32(this.EVs, 8) ^ DecryprionKey).GetBytes()[3]; } }
-                    public byte PokerusStatus { get { return (BitConverter.ToUInt32(this.Misc, 0) ^ DecryprionKey).GetBytes()[0]; } }
-                    public byte MetLocation { get { return (BitConverter.ToUInt32(this.Misc, 0) ^ DecryprionKey).GetBytes()[1]; } }
-                    public ushort OriginsInfo { get { return BitConverter.ToUInt16((BitConverter.ToUInt32(this.Misc, 0) ^ DecryprionKey).GetBytes(),2); } }
-                    public byte HP_IV { get { return (byte)((BitConverter.ToUInt32(this.Misc, 4) ^ DecryprionKey)           & 0b00000000000000000000000000011111); } }
-                    public byte Attack_IV { get { return (byte)(((BitConverter.ToUInt32(this.Misc, 4) ^ DecryprionKey)      & 0b00000000000000000000001111100000) >> 5); } }
-                    public byte Defence_IV { get { return (byte)(((BitConverter.ToUInt32(this.Misc, 4) ^ DecryprionKey)     & 0b00000000000000000111110000000000) >> 10); } }
-                    public byte Speed_IV { get { return (byte)(((BitConverter.ToUInt32(this.Misc, 4) ^ DecryprionKey)       & 0b00000000000011111000000000000000) >> 15); } }
-                    public byte SPAttack_IV { get { return (byte)(((BitConverter.ToUInt32(this.Misc, 4) ^ DecryprionKey)    & 0b00000001111100000000000000000000) >> 20); } }
-                    public byte SPDefence_IV { get { return (byte)(((BitConverter.ToUInt32(this.Misc, 4) ^ DecryprionKey)   & 0b00111110000000000000000000000000) >> 25); } }
-                    public bool IsEgg { get { return (((BitConverter.ToUInt32(this.Misc, 4) ^ DecryprionKey)              & 0b00000000000000000000000000000011) >> 0) == 0? false : true; } }
-                    public byte Ability { get { return (byte)(((BitConverter.ToUInt32(this.Misc, 4) ^ DecryprionKey)      & 0b10000000000000000000000000000000) >> 31); } }
-                    public byte Ribbon_Cool { get { return (byte)(((BitConverter.ToUInt32(this.Misc, 8) ^ DecryprionKey)        & 0b00000000000000000000000000000111) >> 0); } }
-                    public byte Ribbon_Beauty { get { return (byte)(((BitConverter.ToUInt32(this.Misc, 8) ^ DecryprionKey)      & 0b00000000000000000000000000111000) >> 3); } }
-                    public byte Ribbon_Cute { get { return (byte)(((BitConverter.ToUInt32(this.Misc, 8) ^ DecryprionKey)        & 0b00000000000000000000000111000000) >> 6); } }
-                    public byte Ribbon_Smart { get { return (byte)(((BitConverter.ToUInt32(this.Misc, 8) ^ DecryprionKey)       & 0b00000000000000000000111000000000) >> 9); } }
-                    public byte Ribbon_Tought { get { return (byte)(((BitConverter.ToUInt32(this.Misc, 8) ^ DecryprionKey)      & 0b00000000000000000111000000000000) >> 12); } }
-                    public byte Ribbon_Champion { get { return (byte)(((BitConverter.ToUInt32(this.Misc, 8) ^ DecryprionKey)    & 0b00000000000000001000000000000000) >> 13); } }
-                    public byte Ribbon_Winning { get { return (byte)(((BitConverter.ToUInt32(this.Misc, 8) ^ DecryprionKey)     & 0b00000000000000010000000000000000) >> 14); } }
-                    public byte Ribbon_Victory { get { return (byte)(((BitConverter.ToUInt32(this.Misc, 8) ^ DecryprionKey)     & 0b00000000000000100000000000000000) >> 15); } }
-                    public byte Ribbon_Artist { get { return (byte)(((BitConverter.ToUInt32(this.Misc, 8) ^ DecryprionKey)      & 0b00000000000001000000000000000000) >> 16); } }
-                    public byte Ribbon_Effort { get { return (byte)(((BitConverter.ToUInt32(this.Misc, 8) ^ DecryprionKey)      & 0b00000000000010000000000000000000) >> 17); } }
-                    public byte Ribbon_Special1 { get { return (byte)(((BitConverter.ToUInt32(this.Misc, 8) ^ DecryprionKey)    & 0b00000000000100000000000000000000) >> 18); } }
-                    public byte Ribbon_Special2 { get { return (byte)(((BitConverter.ToUInt32(this.Misc, 8) ^ DecryprionKey)    & 0b00000000001000000000000000000000) >> 19); } }
-                    public byte Ribbon_Special3 { get { return (byte)(((BitConverter.ToUInt32(this.Misc, 8) ^ DecryprionKey)    & 0b00000000010000000000000000000000) >> 20); } }
-                    public byte Ribbon_Special4 { get { return (byte)(((BitConverter.ToUInt32(this.Misc, 8) ^ DecryprionKey)    & 0b00000000100000000000000000000000) >> 21); } }
-                    public byte Ribbon_Special5 { get { return (byte)(((BitConverter.ToUInt32(this.Misc, 8) ^ DecryprionKey)    & 0b00000001000000000000000000000000) >> 22); } }
-                    public byte Ribbon_Special6 { get { return (byte)(((BitConverter.ToUInt32(this.Misc, 8) ^ DecryprionKey)    & 0b00000010000000000000000000000000) >> 23); } }
-
-                    internal uint DecryprionKey
-                    {
-                        get { return this.sv.Personality ^ this.sv.OTID; }
-                    }
-                    private int Modulo;
-                    internal PokemonData(Pokemon sv) 
-                    { 
-                        this.sv = sv;
-                        this.Modulo = (int)(sv.Personality % 24);
-                        var b = dd[1].IndexOf("G"); 
-                    }
-                }
-                public Pokemon(SaveFile sv,uint number)
-                { this.sv = sv; this.number = number; this.start = sv.GameType == Game.FL ? (uint)0x0038 : (uint)0x0238; }
-            }
-        }
-        public class OptionsClass
-        {
-            internal SaveFile sv;
-            internal OptionsClass(SaveFile sv) { this.sv = sv; }
-            public ButtonMode ButtonMode
-            {
-                get { return (ButtonMode)this.sv.GameSaveA.sections[0].wholeData[0x0013]; }
-                set { throw new NotImplementedException(); }
-            }
-            public TextSpeed TextSpeed
-            {
-                get { return (TextSpeed)(this.sv.GameSaveA.sections[0].wholeData[0x0014] & 0b00000011); }
-                set { throw new NotImplementedException(); }
-            }
-            public byte Frame
-            {
-                get { return (byte)((this.sv.GameSaveA.sections[0].wholeData[0x0014] & 0b11111000) >> 3); }
-                set { throw new NotImplementedException(); }
-            }
-            public Sound Sound
-            {
-                get { return (Sound)(this.sv.GameSaveA.sections[0].wholeData[0x0015] & 0b00000001); }
-                set { throw new NotImplementedException(); }
-            }
-            public BattleStyle BattleStyle
-            {
-                get { return (BattleStyle)((this.sv.GameSaveA.sections[0].wholeData[0x0015] & 0b00000010) >> 1); }
-                set { throw new NotImplementedException(); }
-            }
-            public BattleScene BattleScene
-            {
-                get { return (BattleScene)((this.sv.GameSaveA.sections[0].wholeData[0x0015] & 0b00000100) >> 2); }
-                set { throw new NotImplementedException(); }
-            }
-        }
-        public class PCBoxClass
-        {
-            internal byte[] PCBuffer
-            {
-                get
-                {
-                    var pca = this.sv.GameSaveA.sections[5].wholeData.Sub(0, 3968);
-                    var pcb = this.sv.GameSaveA.sections[6].wholeData.Sub(0, 3968);
-                    var pcc = this.sv.GameSaveA.sections[7].wholeData.Sub(0, 3968);
-                    var pcd = this.sv.GameSaveA.sections[8].wholeData.Sub(0, 3968);
-                    var pce = this.sv.GameSaveA.sections[9].wholeData.Sub(0, 3968);
-                    var pcf = this.sv.GameSaveA.sections[10].wholeData.Sub(0, 3968);
-                    var pcg = this.sv.GameSaveA.sections[11].wholeData.Sub(0, 3968);
-                    var pch = this.sv.GameSaveA.sections[12].wholeData.Sub(0, 3968);
-                    var pci = this.sv.GameSaveA.sections[13].wholeData.Sub(0, 2000);
-                    List<byte> result = new List<byte>();
-                    foreach (var x in pca)
-                        result.Add(x);
-                    foreach (var x in pcb)
-                        result.Add(x);
-                    foreach (var x in pcc)
-                        result.Add(x);
-                    foreach (var x in pcd)
-                        result.Add(x);
-                    foreach (var x in pce)
-                        result.Add(x);
-                    foreach (var x in pcf)
-                        result.Add(x);
-                    foreach (var x in pcg)
-                        result.Add(x);
-                    foreach (var x in pch)
-                        result.Add(x);
-                    foreach (var x in pci)
-                        result.Add(x);
-                    return result.ToArray();
-                }
-            }
-            public uint CurrentPCBox
-            {
-                get { return BitConverter.ToUInt32(this.PCBuffer, 0); }
-            }
-            public string[] BoxNames
-            {
-                get
-                {
-                    List<string> result = new List<string>();
-                    for (uint i = 0; i < 14; i++)
-                        result.Add(this.PCBuffer.Sub(0x8344 + (i * 9), 9).Decode());
-                    return result.ToArray();
-                }
-            }
-            public byte[] BoxWallpapers
-            {
-                get { return this.PCBuffer.Sub(0x83C2, 14); }
-            }
-            internal SaveFile sv;
-            public Pokemon[] Pokemons = new Pokemon[420];
-            public PCBoxClass(SaveFile sv) { this.sv = sv; 
-                this.Pokemons = new Pokemon[420];
-                for (uint i = 0; i < 420; i++)
-                {
-                    Pokemons[i] = new Pokemon(this, i);
-                }
-            }
-            public class Pokemon
-            {
-                internal uint Start
-                {
-                    get { return (uint)(80 * number + 4); }
-                }
-                public uint Box
-                {
-                    get { return (uint)(this.number / 30); }
-                }
-                public uint Personality
-                {
-                    get { return BitConverter.ToUInt32(this.PC.PCBuffer, (int)Start); }
-                    set { this.PC.PCBuffer.Update((uint)(80 * number), value); }
-                }
-                public uint OTID
-                {
-                    get { return BitConverter.ToUInt32(this.PC.PCBuffer, (int)Start + 4); }
-                    set { this.PC.PCBuffer.Update((uint)Start + 4, value); }
-                }
-                public string Nickaname
-                {
-                    get { return this.PC.PCBuffer.Sub(Start + 8, 10).Decode(jp:(this.Language == Language.Japanese)); }
-                    set { this.PC.PCBuffer.Update(Start + 8, value, 10); }
-                }
-                public Language Language
-                {
-                    get { return (Language)BitConverter.ToUInt16(this.PC.PCBuffer, (int)Start + 18); }
-                    set { this.PC.PCBuffer.Update((uint) Start + 18, (uint)value); }
-                }
-                public string OTName
-                {
-                    get { return this.PC.PCBuffer.Sub(Start + 20, 7).Decode(jp: (this.Language == Language.Japanese)); }
-                    set { this.PC.PCBuffer.Update(Start + 20, value, 7); }
-                }
-                public bool IsPokemon
-                {
-                    get
-                    {
-                        if (this.PC.PCBuffer[Start + 8] == 0)
-                            return false;
-                        else return true;
-                    }
-                }
-                public ushort CheckSum
-                {
-                    get { return BitConverter.ToUInt16(this.PC.PCBuffer,(int)Start+28); }
-                    set { this.PC.PCBuffer.Update((uint)Start + 28, value); }
-                }
-                public byte[] EncryptedData
-                {
-                    get { return this.PC.PCBuffer.Sub(Start + 32, 48); }
-                    set { this.PC.PCBuffer.Update(Start + 32, value); }
-                }
-                public PokemonData Data
-                {
-                    get { return new PokemonData(this); }
-                }
-                internal PCBoxClass PC;
-                internal uint number;
-                public Pokemon(PCBoxClass Buffer, uint no)
-                {
-                    this.PC = Buffer;
-                    this.number = no;
-                }
-                public class PokemonData
-                {
-                    internal List<List<string>> dd = new List<List<string>>
-                    {
-                        new List<string>(){"G","A","E","M"},
-                        new List<string>(){"G","A","M","E"},
-                        new List<string>(){"G","E","A","M"},
-                        new List<string>(){"G","E","M","A"},
-                        new List<string>(){"G","M","A","E"},
-                        new List<string>(){"G","M","E","A"},
-                        new List<string>(){"A","G","E","M"},
-                        new List<string>(){"A","G","M","E"},
-                        new List<string>(){"A","E","G","M"},
-                        new List<string>(){"A","E","M","G"},
-                        new List<string>(){"A","M","G","E"},
-                        new List<string>(){"A","M","E","G"},
-                        new List<string>(){"E","G","A","M"},
-                        new List<string>(){"E","G","M","A"},
-                        new List<string>(){"E","A","G","M"},
-                        new List<string>(){"E","A","M","G"},
-                        new List<string>(){"E","M","G","A"},
-                        new List<string>(){"E","M","A","G"},
-                        new List<string>(){"M","G","A","E"},
-                        new List<string>(){"M","G","E","A"},
-                        new List<string>(){"M","A","G","E"},
-                        new List<string>(){"M","A","E","G"},
-                        new List<string>(){"M","E","G","A"},
-                        new List<string>(){"M","E","A","G"},
-                    };
-                    internal byte[] Growth
-                    {
-                        get { return this.sv.EncryptedData.Sub((uint)dd[this.Modulo].IndexOf("G") * 12, 12); }
-                    }
-                    internal byte[] Attacks
-                    {
-                        get { return this.sv.EncryptedData.Sub((uint)dd[this.Modulo].IndexOf("A") * 12, 12); }
-                    }
-                    internal byte[] EVs
-                    {
-                        get { return this.sv.EncryptedData.Sub((uint)dd[this.Modulo].IndexOf("E") * 12, 12); }
-                    }
-                    internal byte[] Misc
-                    {
-                        get { return this.sv.EncryptedData.Sub((uint)dd[this.Modulo].IndexOf("M") * 12, 12); }
-                    }
-                    internal Pokemon sv;
-                    public ushort Species
-                    {
-                        get { return BitConverter.ToUInt16((BitConverter.ToUInt32(this.Growth, 0) ^ DecryprionKey).GetBytes(), 0); }
-                    }
-                    public ushort HeldItem
-                    {
-                        get { return BitConverter.ToUInt16((BitConverter.ToUInt32(this.Growth, 0) ^ DecryprionKey).GetBytes(), 2); }
-                    }
-                    public uint Experience
-                    {
-                        get { return BitConverter.ToUInt32(this.Growth, 4) ^ DecryprionKey; }
-                    }
-                    public byte PPBonuses
-                    {
-                        get { return (BitConverter.ToUInt32(this.Growth, 8) ^ DecryprionKey).GetBytes()[0]; }
-                    }
-                    public byte Friendship
-                    {
-                        get { return (BitConverter.ToUInt32(this.Growth, 8) ^ DecryprionKey).GetBytes()[1]; }
-                    }
-                    public ushort Move1
-                    {
-                        get { return BitConverter.ToUInt16((BitConverter.ToUInt32(this.Attacks, 0) ^ DecryprionKey).GetBytes(), 0); }
-                    }
-                    public ushort Move2
-                    {
-                        get { return BitConverter.ToUInt16((BitConverter.ToUInt32(this.Attacks, 0) ^ DecryprionKey).GetBytes(), 2); }
-                    }
-                    public ushort Move3
-                    {
-                        get { return BitConverter.ToUInt16((BitConverter.ToUInt32(this.Attacks, 4) ^ DecryprionKey).GetBytes(), 0); }
-                    }
-                    public ushort Move4
-                    {
-                        get { return BitConverter.ToUInt16((BitConverter.ToUInt32(this.Attacks, 4) ^ DecryprionKey).GetBytes(), 2); }
-                    }
-                    public byte PP1
-                    {
-                        get { return (BitConverter.ToUInt32(this.Attacks, 8) ^ DecryprionKey).GetBytes()[0]; }
-                    }
-                    public byte PP2
-                    {
-                        get { return (BitConverter.ToUInt32(this.Attacks, 8) ^ DecryprionKey).GetBytes()[1]; }
-                    }
-                    public byte PP3
-                    {
-                        get { return (BitConverter.ToUInt32(this.Attacks, 8) ^ DecryprionKey).GetBytes()[2]; }
-                    }
-                    public byte PP4
-                    {
-                        get { return (BitConverter.ToUInt32(this.Attacks, 8) ^ DecryprionKey).GetBytes()[3]; }
-                    }
-                    public byte HP_EV { get { return (BitConverter.ToUInt32(this.EVs, 0) ^ DecryprionKey).GetBytes()[0]; } }
-                    public byte Attack_EV { get { return (BitConverter.ToUInt32(this.EVs, 0) ^ DecryprionKey).GetBytes()[1]; } }
-                    public byte Defence_EV { get { return (BitConverter.ToUInt32(this.EVs, 0) ^ DecryprionKey).GetBytes()[2]; } }
-                    public byte Speed_EV { get { return (BitConverter.ToUInt32(this.EVs, 0) ^ DecryprionKey).GetBytes()[3]; } }
-                    public byte SPAttack_EV { get { return (BitConverter.ToUInt32(this.EVs, 4) ^ DecryprionKey).GetBytes()[0]; } }
-                    public byte SPDefence_EV { get { return (BitConverter.ToUInt32(this.EVs, 4) ^ DecryprionKey).GetBytes()[1]; } }
-                    public byte Coolness_EV { get { return (BitConverter.ToUInt32(this.EVs, 4) ^ DecryprionKey).GetBytes()[2]; } }
-                    public byte Beauty_EV { get { return (BitConverter.ToUInt32(this.EVs, 4) ^ DecryprionKey).GetBytes()[3]; } }
-                    public byte Cuteness_EV { get { return (BitConverter.ToUInt32(this.EVs, 8) ^ DecryprionKey).GetBytes()[0]; } }
-                    public byte Smartness_EV { get { return (BitConverter.ToUInt32(this.EVs, 8) ^ DecryprionKey).GetBytes()[1]; } }
-                    public byte Toughness_EV { get { return (BitConverter.ToUInt32(this.EVs, 8) ^ DecryprionKey).GetBytes()[2]; } }
-                    public byte Feel_EV { get { return (BitConverter.ToUInt32(this.EVs, 8) ^ DecryprionKey).GetBytes()[3]; } }
-                    public byte PokerusStatus { get { return (BitConverter.ToUInt32(this.Misc, 0) ^ DecryprionKey).GetBytes()[0]; } }
-                    public byte MetLocation { get { return (BitConverter.ToUInt32(this.Misc, 0) ^ DecryprionKey).GetBytes()[1]; } }
-                    public ushort OriginsInfo { get { return BitConverter.ToUInt16((BitConverter.ToUInt32(this.Misc, 0) ^ DecryprionKey).GetBytes(), 2); } }
-                    public byte HP_IV { get { return (byte)((BitConverter.ToUInt32(this.Misc, 4) ^ DecryprionKey) & 0b00000000000000000000000000011111); } }
-                    public byte Attack_IV { get { return (byte)(((BitConverter.ToUInt32(this.Misc, 4) ^ DecryprionKey) & 0b00000000000000000000001111100000) >> 5); } }
-                    public byte Defence_IV { get { return (byte)(((BitConverter.ToUInt32(this.Misc, 4) ^ DecryprionKey) & 0b00000000000000000111110000000000) >> 10); } }
-                    public byte Speed_IV { get { return (byte)(((BitConverter.ToUInt32(this.Misc, 4) ^ DecryprionKey) & 0b00000000000011111000000000000000) >> 15); } }
-                    public byte SPAttack_IV { get { return (byte)(((BitConverter.ToUInt32(this.Misc, 4) ^ DecryprionKey) & 0b00000001111100000000000000000000) >> 20); } }
-                    public byte SPDefence_IV { get { return (byte)(((BitConverter.ToUInt32(this.Misc, 4) ^ DecryprionKey) & 0b00111110000000000000000000000000) >> 25); } }
-                    public bool IsEgg { get { return (((BitConverter.ToUInt32(this.Misc, 4) ^ DecryprionKey) & 0b00000000000000000000000000000011) >> 0) == 0 ? false : true; } }
-                    public byte Ability { get { return (byte)(((BitConverter.ToUInt32(this.Misc, 4) ^ DecryprionKey) & 0b10000000000000000000000000000000) >> 31); } }
-                    public byte Ribbon_Cool { get { return (byte)(((BitConverter.ToUInt32(this.Misc, 8) ^ DecryprionKey) & 0b00000000000000000000000000000111) >> 0); } }
-                    public byte Ribbon_Beauty { get { return (byte)(((BitConverter.ToUInt32(this.Misc, 8) ^ DecryprionKey) & 0b00000000000000000000000000111000) >> 3); } }
-                    public byte Ribbon_Cute { get { return (byte)(((BitConverter.ToUInt32(this.Misc, 8) ^ DecryprionKey) & 0b00000000000000000000000111000000) >> 6); } }
-                    public byte Ribbon_Smart { get { return (byte)(((BitConverter.ToUInt32(this.Misc, 8) ^ DecryprionKey) & 0b00000000000000000000111000000000) >> 9); } }
-                    public byte Ribbon_Tought { get { return (byte)(((BitConverter.ToUInt32(this.Misc, 8) ^ DecryprionKey) & 0b00000000000000000111000000000000) >> 12); } }
-                    public byte Ribbon_Champion { get { return (byte)(((BitConverter.ToUInt32(this.Misc, 8) ^ DecryprionKey) & 0b00000000000000001000000000000000) >> 13); } }
-                    public byte Ribbon_Winning { get { return (byte)(((BitConverter.ToUInt32(this.Misc, 8) ^ DecryprionKey) & 0b00000000000000010000000000000000) >> 14); } }
-                    public byte Ribbon_Victory { get { return (byte)(((BitConverter.ToUInt32(this.Misc, 8) ^ DecryprionKey) & 0b00000000000000100000000000000000) >> 15); } }
-                    public byte Ribbon_Artist { get { return (byte)(((BitConverter.ToUInt32(this.Misc, 8) ^ DecryprionKey) & 0b00000000000001000000000000000000) >> 16); } }
-                    public byte Ribbon_Effort { get { return (byte)(((BitConverter.ToUInt32(this.Misc, 8) ^ DecryprionKey) & 0b00000000000010000000000000000000) >> 17); } }
-                    public byte Ribbon_Special1 { get { return (byte)(((BitConverter.ToUInt32(this.Misc, 8) ^ DecryprionKey) & 0b00000000000100000000000000000000) >> 18); } }
-                    public byte Ribbon_Special2 { get { return (byte)(((BitConverter.ToUInt32(this.Misc, 8) ^ DecryprionKey) & 0b00000000001000000000000000000000) >> 19); } }
-                    public byte Ribbon_Special3 { get { return (byte)(((BitConverter.ToUInt32(this.Misc, 8) ^ DecryprionKey) & 0b00000000010000000000000000000000) >> 20); } }
-                    public byte Ribbon_Special4 { get { return (byte)(((BitConverter.ToUInt32(this.Misc, 8) ^ DecryprionKey) & 0b00000000100000000000000000000000) >> 21); } }
-                    public byte Ribbon_Special5 { get { return (byte)(((BitConverter.ToUInt32(this.Misc, 8) ^ DecryprionKey) & 0b00000001000000000000000000000000) >> 22); } }
-                    public byte Ribbon_Special6 { get { return (byte)(((BitConverter.ToUInt32(this.Misc, 8) ^ DecryprionKey) & 0b00000010000000000000000000000000) >> 23); } }
-
-                    internal uint DecryprionKey
-                    {
-                        get { return this.sv.Personality ^ this.sv.OTID; }
-                    }
-                    private int Modulo;
-                    internal PokemonData(Pokemon sv)
-                    {
-                        this.sv = sv;
-                        this.Modulo = (int)(sv.Personality % 24);
-                        var b = dd[1].IndexOf("G");
-                    }
-                }
-
-            }
-        }
-
-        public Game GameType
-        {
-            get { if (GameSaveA.sections[0].wholeData[0x00AC] == 0) return Game.RS;
-                else if (GameSaveA.sections[0].wholeData[0x00AC] == 1) return Game.FL;
-                else return Game.E;
-            }
-        }
-        public uint SecurityKey
-        {
-            get { if (this.GameType == Game.E) return BitConverter.ToUInt32(this.GameSaveA.sections[0].wholeData, 0x00AC);
-                else if (this.GameType == Game.RS) return 0;
-                else return BitConverter.ToUInt32(this.GameSaveA.sections[0].wholeData, 0X0AF8);
-                    }
+            this.FileName = filename;
+            byte[] arr = System.IO.File.ReadAllBytes(filename);
+            if (arr.Length < SizeLow || arr.Length > SizeHigh)
+                throw new Exception("Wrong file save Format");
+            this.data = new Data(arr);
+            this.Initialize();
         }
         internal void Initialize()
         {
-            this.GameSaveA = new GameSave(this.GameSaveAData);
-            this.GameSaveB = new GameSave(this.GameSaveBData);
-            
-            this.Player = new SaveFile.PlayerClass(this);
-            this.Options = new OptionsClass(this);
-            this.PCBoxes = new PCBoxClass(this);
-            this.Pokedex = new PokedexClass(this);
-            this.HallOfFame = new HoFClass(this);
+            this.GameSaveA = new GameSave(data, 0x000000);
+            this.GameSaveB = new GameSave(data, 0x00E000);
+            this.TrainerInfo = GameSaveA.TrainerInfo.SaveCount > GameSaveB.TrainerInfo.SaveCount ? GameSaveA.TrainerInfo : GameSaveB.TrainerInfo;
+            this.TeamItems = GameSaveA.TrainerInfo.SaveCount > GameSaveB.TrainerInfo.SaveCount ? GameSaveA.TeamItems : GameSaveB.TeamItems;
+            this.PCBuffers = GameSaveA.PCBuffers[0].SaveCount > GameSaveB.PCBuffers[0].SaveCount ? GameSaveA.PCBuffers : GameSaveA.PCBuffers;
+            this._PCPokemons = new GameSave.PCPokemonsClass(this.PCBuffers);
         }
+        public class GameSave
+        {
+            internal Data data;
+            internal uint offset;
+            internal Section[] _sections;
+            public TrainerInfoClass TrainerInfo;
+            public TeamItemsClass TeamItems;
+            public PCBufferClass[] PCBuffers;
+            internal static uint Size = 57344;
+            internal GameSave(Data data, uint offset)
+            {
+                this.data = data; this.offset = offset;
+                this._sections = new Section[14];
+                for (uint i = 0; i < 14; i++)
+                    this._sections[i] = new Section(data,this.offset+ i * 4096);
+                var trainerInfoSection = _sections.Where(x => x.SectionID == 0).Single();
+                var dd = _sections.Where(x => x.SectionID == 0).Single().offset;
+                this.TrainerInfo = new TrainerInfoClass(data, _sections.Where(x => x.SectionID == 0).Single().offset);
+                this.TeamItems = new TeamItemsClass(
+                    data,
+                    _sections.Where(x => x.SectionID == 1).Single().offset,
+                    this.TrainerInfo.SecurityKey,
+                    this.TrainerInfo.GameVersion);
+                this.PCBuffers = new PCBufferClass[9];
+                for (uint i = 0; i < 9; i++)
+                    this.PCBuffers[i] = new PCBufferClass(this.data, _sections.Where(x => x.SectionID == i + 5).Single().offset, i);
+            }
+
+            public class Section
+            {
+                internal Data data;
+                internal uint offset;
+                internal uint[] SectionChecksumableData = new uint[14]
+            {
+                3884, // 0  - Trainer Info
+                3968, // 1  - Team - Items
+                3968, // 2  - Game State
+                3968, // 3  - Misc Data
+                3968, // 4  - Rival Info
+                3968, // 5  - PC Buffer A
+                3968, // 6  - PC Buffer B
+                3968, // 7  - PC Buffer C
+                3968, // 8  - PC Buffer D
+                3968, // 9  - PC Buffer E
+                3968, // 10 - PC Buffer F
+                3968, // 11 - PC Buffer G
+                3968, // 12 - PC Buffer H
+                2000, // 13 - PC Buffer I
+            };
+                internal Section(Data data,uint offset) { this.data = data; this.offset = offset; }
+                public uint SaveCount { get { return this.data.Read.Uint(this.offset + 0xFFC); } }
+                public ushort SectionID { get { return this.data.Read.Ushort(this.offset + 0xFF4); } }
+                public ushort Checksum { get { return this.data.Read.Ushort(this.offset + 0xFF6); } }
+                public bool ChecksumGood
+                {
+                    get { return this.Checksum == GenerateChecksum(); }
+                }
+                public ushort GenerateChecksum()
+                {
+                    uint result = 0;
+                    ushort SectionID = this.SectionID;
+                    for (uint i =0; i < this.SectionChecksumableData[SectionID]; i += 4)
+                        result += this.data.Read.Uint(this.offset+i);
+                    byte[] arr = BitConverter.GetBytes(result);
+                    ushort re = (ushort)(BitConverter.ToInt16(arr, 0) + BitConverter.ToInt16(arr, 2));
+                    return re;
+                }
+            }
+            public class TrainerInfoClass : Section
+            {
+                internal TrainerInfoClass(Data data, uint offset) : base(data,offset) 
+                { 
+                    this.data = data;
+                    this.offset = offset;
+                    this.options = new Options(data, offset);
+                }
+                public Options options;
+                public string PlayerName { get { return this.data.Read.String(this.offset, 7); } }
+                public Gender PlayerGender { get { return (Gender)this.data[this.offset + 0x0008]; } }
+                public uint TrainerID { get { return this.data.Read.Uint(this.offset + 0x000A); } }
+                public ushort TrainerPID { get { return this.data.Read.Ushort(this.offset + 0x000A); } }
+                public ushort TrainerSID { get { return this.data.Read.Ushort(this.offset + 0x000C); } }
+                public ushort HoursPlayed { get { return this.data.Read.Ushort(this.offset + 0x000E); } }
+                public byte MinutesPlayed { get { return this.data.Read.Byte(this.offset + 0x0010); } }
+                public byte SecondsPlayed { get { return this.data.Read.Byte(this.offset + 0x0011); } }
+                public byte FramesPlayed { get { return this.data.Read.Byte(this.offset + 0x0012); } }
+                public Version GameVersion
+                {
+                    get
+                    {
+                        byte BT = this.data[this.offset + 0x00AC];
+                        if (BT == 0x00)
+                            return Version.RS;
+                        else if (BT == 0x01)
+                            return Version.FL;
+                        else return Version.E;
+                    }
+                }
+                public uint SecurityKey
+                {
+                    get
+                    {
+                        if (this.GameVersion == Version.E)
+                            return this.data.Read.Uint(this.offset + 0x00AC);
+                        else if (this.GameVersion == Version.FL)
+                            return this.data.Read.Uint(this.offset + 0x0AF8);
+                        else return 0;
+                    }
+                }
+                public class Options
+                {
+                    internal Data data;
+                    internal uint offset;
+                    internal Options(Data data, uint offset) { this.data = data;this.offset = offset; }
+                    public ButtonMode ButtonMode { get { return (ButtonMode)this.data[this.offset + 0x0013]; } }
+                    public TextSpeed TextSpeed { get { return (TextSpeed)(this.data[this.offset+0x0014] & 7); } }
+                    public Sound SoundMode { get { return this.data[0x0015].GetBit(0) ? Sound.Stereo: Sound.Mono; } }
+                    public BattleStyle BattleStyleMode { get { return this.data[this.offset + 0x0015].GetBit(1) ? BattleStyle.Set : BattleStyle.Switch; } }
+                    public BattleScene BattleSceneMode { get { return this.data[this.offset + 0x0015].GetBit(2) ? BattleScene.Off : BattleScene.On; } }
+                    public byte Frame { get { return (byte)((this.data[this.offset + 0x0014] & 0b11111000) >> 3); } }
+                }
+            }
+            public class TeamItemsClass : Section
+            {
+
+                //Interna;
+                internal Data data;
+                internal uint offset;
+                internal uint SecurityKey;
+                internal Version v;
+                //Public
+                public PokemonPartyClass[] PartyPokemons;
+                public Item[] PCItems;
+                public Item[] Items;
+                public Item[] KeyItems;
+                public Item[] Balls;
+                public Item[] TMCase;
+                public Item[] Berries;
+
+                //Private
+
+
+                internal TeamItemsClass(Data data, uint offset,uint key,Version v) : base(data, offset) { this.data = data; this.offset = offset;
+                    this.PartyPokemons = new PokemonPartyClass[6];
+                    for (uint i = 0; i < 6; i++)
+                        PartyPokemons[i] = new PokemonPartyClass(data, this.offset + (uint)(v == Version.FL ? 0x38 : 0x238) + (i * 100));
+                    this.SecurityKey = key;
+                    this.v = v;
+
+                    InitializeItems();
+
+
+                }
+                private void InitializeItems()
+                {
+                    //PCItems
+                    this.PCItems    = new Item[(this.v == Version.FL ? 30 : 50)];
+                    this.Items      = new Item[(this.v == Version.FL ? 42 : this.v == Version.E ? 30 : 20)];
+                    this.KeyItems   = new Item[(this.v == Version.E ? 30 : 20)];
+                    this.Balls      = new Item[(this.v == Version.FL ? 13 : 13)];
+                    this.TMCase     = new Item[(this.v == Version.FL ? 58 : 64)];
+                    this.Berries    = new Item[(this.v == Version.FL ? 43 : 46)];
+
+
+                    int offPCItems  = this.v == Version.FL ? 0x0298 : 0x0498;
+                    int offItems    = this.v == Version.FL ? 0X310 : 0x560;
+                    int offKeys     = this.v == Version.RS ? 0x5b0 : this.v == Version.E ? 0x5d8 : 0x03b8;
+                    int offBalls    = this.v == Version.RS ? 0x600 : this.v == Version.E ? 0x650 : 0x430;
+                    int offTM       = this.v == Version.RS ? 0x640 : this.v == Version.E ? 0x690 : 0x464;
+                    int offBerries  = this.v == Version.RS ? 0x740 : this.v == Version.E ? 0x790 : 0x54c;
+                    for (uint i = 0; i < (this.v == Version.FL ? 30 : 50); i++)
+                        this.PCItems[i] = new Item(this.data, (uint)(this.offset + offPCItems + (i * 4)));
+                    for (uint i = 0; i < (this.v == Version.FL ? 42 : this.v == Version.E ? 30 : 20); i++)
+                        this.Items[i] = new Item(this.data, (uint)(this.offset + offItems + (i * 4)));
+                    for (uint i = 0; i < (this.v == Version.E ? 30 : 20); i++)
+                        this.KeyItems[i] = new Item(this.data, (uint)(this.offset + offKeys + (i * 4)));
+                    for (uint i = 0; i < (this.v == Version.FL ? 13 : 13); i++)
+                        this.Balls[i] = new Item(this.data, (uint)(this.offset + offBalls + (i * 4)));
+                    for (uint i = 0; i < (this.v == Version.FL ? 58 : 64); i++)
+                        this.TMCase[i] = new Item(this.data, (uint)(this.offset + offTM + (i * 4)));
+                    for (uint i = 0; i < (this.v == Version.FL ? 43 : 46); i++)
+                        this.Berries[i] = new Item(this.data, (uint)(this.offset + offBerries + (i * 4)));
+                }
+                public uint TeamSize        { get { return this.data.Read.Uint(this.offset + (uint)(v == Version.FL ? 0x0034:0x0234)); } }
+                public uint Money           { get { return this.data.Read.Uint(this.offset + (uint)(v == Version.FL ? 0x0290 : 0x0490)) ^ this.SecurityKey; } }
+                public ushort Coins         { get { return (ushort)(this.data.Read.Ushort(this.offset + (uint)(v == Version.FL ? 0x0294 : 0x0494)) ^ (this.SecurityKey & 0xFFFF)); } }
+
+                public class Item
+                {
+                    internal uint offset;
+                    internal Data data;
+                    public ushort Index { get { return this.data.Read.Ushort(this.offset); } }
+                    public ushort Quantity { get { return this.data.Read.Ushort(this.offset + 2); } }
+                    public Item(Data data, uint offset) { this.data = data; this.offset = offset; }
+                }
+                public class PokemonPartyClass
+                {
+                    internal Data data;
+                    internal uint offset;
+                    internal PokemonPartyClass(Data data, uint offset) { this.data = data; this.offset = offset; }
+                    public uint PersonalityValue    { get { return this.data.Read.Uint(this.offset + 0x00); } }
+                    public uint OTID                { get { return this.data.Read.Uint(this.offset + 0x04); } }
+                    public string Nickname          { get { return this.data.Read.String(this.offset + 0x08, 10); } }
+                    public Language Language        { get { return (Language)this.data.Read.Ushort(this.offset + 18); } }
+                    public string OTName            { get { return this.data.Read.String(this.offset + 20, 7); } }
+                    public Marking Markigns         { get { return (Marking)this.data[this.offset + 27]; } }
+                    public ushort CheckSum          { get { return this.data.Read.Ushort(this.offset + 28); } }
+                    public PokemonDataClass Data { get { return new PokemonDataClass(data,this, this.offset); } }
+                    public virtual uint StatusCondition     { get { return this.data.Read.Uint(this.offset + 80); } }
+                    public virtual byte Level               { get { return this.data[this.offset + 84]; } }
+                    public virtual byte Pokerus             { get { return this.data[this.offset + 85]; } }
+                    public virtual ushort CurrentHP         { get { return this.data[this.offset + 86]; } }
+                    public virtual ushort TotalHP           { get { return this.data[this.offset + 88]; } }
+                    public virtual ushort Attack            { get { return this.data[this.offset + 90]; } }
+                    public virtual ushort Defence           { get { return this.data[this.offset + 92]; } }
+                    public virtual ushort Speed             { get { return this.data[this.offset + 94]; } }
+                    public virtual ushort SPAttack          { get { return this.data[this.offset + 96]; } }
+                    public virtual ushort SPDefence         { get { return this.data[this.offset + 98]; } }
+                    public class PokemonDataClass
+                    {
+                        internal Data data;
+                        internal uint offset;
+                        internal PokemonPartyClass pkm;
+                        internal PokemonDataClass(Data data, PokemonPartyClass pkm, uint offset) { this.data = data; this.offset = offset; this.pkm = pkm; }
+                        private uint order { get { return this.pkm.PersonalityValue % 24; } }
+                        private uint decryptionKey { get { return this.pkm.PersonalityValue ^ pkm.OTID; } }
+                        private int[,] orders = new int[,]
+                        {
+                            { 0,1,2,3 },
+                            { 0,1,3,2 },
+                            { 0,2,1,3 },
+                            { 0,3,1,2 },
+                            { 0,2,3,1 },
+                            { 0,3,2,1 },
+                            { 1,0,2,3 },
+                            { 1,0,3,2 },
+                            { 2,0,1,3 },
+                            { 3,0,1,2 },
+                            { 2,0,3,1 },
+                            { 3,0,2,1 },
+                            { 1,2,0,3 },
+                            { 1,3,0,2 },
+                            { 2,1,0,3 },
+                            { 3,1,0,2 },
+                            { 2,3,0,1 },
+                            { 3,2,0,1 },
+                            { 1,2,3,0 },
+                            { 1,3,2,0 },
+                            { 2,1,3,0 },
+                            { 3,1,2,0 },
+                            { 2,3,1,0 },
+                            { 3,2,1,0 },
+                        };
+                        private ushort CheckSum
+                        {
+                            get
+                            {
+                                ushort value = 0;
+                                for (int i = 0; i < DecryptedData.Length; i += 2)
+                                    value += BitConverter.ToUInt16(DecryptedData, i);
+                                return value;
+                            }
+                        }
+                        public bool ChecksumGood
+                        {
+                            get { return this.CheckSum == this.pkm.CheckSum; }
+                        }
+                        private byte[] DecryptedData
+                        {
+                            get
+                            {
+                                List<byte> result = new List<byte>();
+                                for (uint i = this.offset + 32; i < this.offset + 80; i += 4)
+                                {
+                                    var value = this.data.Read.Uint(i) ^ decryptionKey;
+                                    foreach (byte x in value.GetBytes())
+                                        result.Add(x);
+                                }
+                                return result.ToArray();
+                            }
+                        }
+                        public ushort Species                   { get { return BitConverter.ToUInt16(this.DecryptedData, orders[this.order, 0] * 12 + 0); } }
+                        public ushort HeldItem                  { get { return BitConverter.ToUInt16(this.DecryptedData, orders[this.order, 0] * 12 + 2); } }
+                        public uint Experience                  { get { return BitConverter.ToUInt32(this.DecryptedData, orders[this.order, 0] * 12 + 4); } }
+                        public byte PPBonuses                   { get { return this.DecryptedData[orders[this.order, 0] * 12 + 8]; } }
+                        public byte Friendship                  { get { return this.DecryptedData[orders[this.order, 0] * 12 + 9]; } }
+                        public ushort Move1                     { get { return BitConverter.ToUInt16(this.DecryptedData, orders[this.order, 1] * 12 + 0); } }
+                        public ushort Move2                     { get { return BitConverter.ToUInt16(this.DecryptedData, orders[this.order, 1] * 12 + 2); } }
+                        public ushort Move3                     { get { return BitConverter.ToUInt16(this.DecryptedData, orders[this.order, 1] * 12 + 4); } }
+                        public ushort Move4                     { get { return BitConverter.ToUInt16(this.DecryptedData, orders[this.order, 1] * 12 + 6); } }
+                        public byte PP1                         { get { return this.DecryptedData[orders[this.order, 1] * 12 + 8]; } }
+                        public byte PP2                         { get { return this.DecryptedData[orders[this.order, 1] * 12 + 9]; } }
+                        public byte PP3                         { get { return this.DecryptedData[orders[this.order, 1] * 12 + 10]; } }
+                        public byte PP4                         { get { return this.DecryptedData[orders[this.order, 1] * 12 + 11]; } }
+                        public byte EV_HP                       { get { return this.DecryptedData[orders[this.order, 2] * 12 + 0]; } }
+                        public byte EV_Attack                   { get { return this.DecryptedData[orders[this.order, 2] * 12 + 1]; } }
+                        public byte EV_Defence                  { get { return this.DecryptedData[orders[this.order, 2] * 12 + 2]; } }
+                        public byte EV_Speed                    { get { return this.DecryptedData[orders[this.order, 2] * 12 + 3]; } }
+                        public byte EV_SPAttack                 { get { return this.DecryptedData[orders[this.order, 2] * 12 + 4]; } }
+                        public byte EV_SPDefence                { get { return this.DecryptedData[orders[this.order, 2] * 12 + 5]; } }
+                        public byte Coolness                    { get { return this.DecryptedData[orders[this.order, 2] * 12 + 6]; } }
+                        public byte Beauty                      { get { return this.DecryptedData[orders[this.order, 2] * 12 + 7]; } }
+                        public byte Cuteness                    { get { return this.DecryptedData[orders[this.order, 2] * 12 + 8]; } }
+                        public byte Smartness                   { get { return this.DecryptedData[orders[this.order, 2] * 12 + 9]; } }
+                        public byte Toughness                   { get { return this.DecryptedData[orders[this.order, 2] * 12 + 10]; } }
+                        public byte Feel                        { get { return this.DecryptedData[orders[this.order, 2] * 12 + 11]; } }
+                        public byte PokerusStatus               { get { return this.DecryptedData[orders[this.order, 3] * 12 + 0]; } }
+                        public byte MetLocation                 { get { return this.DecryptedData[orders[this.order, 3] * 12 + 1]; } }
+                        public Gender OTGender                  { get { return this.DecryptedData[orders[this.order, 3] * 12 + 3].GetBit(7) ? Gender.Female : Gender.Male; } }
+                        public Ball Ball                        { get { return (Ball)((this.DecryptedData[orders[this.order, 3] * 12 + 3] & 0b01111000) >> 3); } }
+                        public GameOfOrigin GoO                 { get { return (GameOfOrigin)(ushort)((BitConverter.ToUInt16(this.DecryptedData, orders[this.order, 3] * 12 + 2) & 0b0000011110000000) >> 7); } }
+                        public byte LevelMet                    { get { return (byte)((BitConverter.ToUInt16(this.DecryptedData, orders[this.order, 3] * 12 + 2) & 0b0000000001111111)); } }
+                        public byte IV_HP                       { get { return (byte)((BitConverter.ToUInt16(this.DecryptedData, orders[this.order, 3] * 12 + 4) & 0b00000000000000000000000000011111)     ); } }
+                        public byte IV_Attack                   { get { return (byte)((BitConverter.ToUInt16(this.DecryptedData, orders[this.order, 3] * 12 + 4) & 0b00000000000000000000001111100000) >> 5); } }
+                        public byte IV_Defence                  { get { return (byte)((BitConverter.ToUInt16(this.DecryptedData, orders[this.order, 3] * 12 + 4) & 0b00000000000000000111110000000000) >> 10); } }
+                        public byte IV_Speed                    { get { return (byte)((BitConverter.ToUInt16(this.DecryptedData, orders[this.order, 3] * 12 + 4) & 0b00000000000011111000000000000000) >> 15); } }
+                        public byte IV_SPAttack                 { get { return (byte)((BitConverter.ToUInt16(this.DecryptedData, orders[this.order, 3] * 12 + 4) & 0b00000001111100000000000000000000) >> 20); } }
+                        public byte IV_SPDefence                { get { return (byte)((BitConverter.ToUInt16(this.DecryptedData, orders[this.order, 3] * 12 + 4) & 0b00111110000000000000000000000000) >> 25); } }
+                        public bool IsEgg                       { get { return this.DecryptedData[orders[this.order, 3] * 12 + 7].GetBit(6); } }
+                        public bool SecondAbility               { get { return this.DecryptedData[orders[this.order, 3] * 12 + 7].GetBit(7); } }
+                        public ContestRibbon Ribbon_Cool        { get { return (ContestRibbon)((BitConverter.ToUInt16(this.DecryptedData, orders[this.order, 3] * 12 + 8) & 0b00000000000000000000000000000111)); } }
+                        public ContestRibbon Ribbon_Beauty      { get { return (ContestRibbon)((BitConverter.ToUInt16(this.DecryptedData, orders[this.order, 3] * 12 + 8) & 0b00000000000000000000000000111000) >> 3); } }
+                        public ContestRibbon Ribbon_Cute        { get { return (ContestRibbon)((BitConverter.ToUInt16(this.DecryptedData, orders[this.order, 3] * 12 + 8) & 0b00000000000000000000000111000000) >> 6); } }
+                        public ContestRibbon Ribbon_Smart       { get { return (ContestRibbon)((BitConverter.ToUInt16(this.DecryptedData, orders[this.order, 3] * 12 + 8) & 0b00000000000000000000111000000000) >> 9); } }
+                        public ContestRibbon Ribbon_Tought      { get { return (ContestRibbon)((BitConverter.ToUInt16(this.DecryptedData, orders[this.order, 3] * 12 + 8) & 0b00000000000000000111000000000000) >> 12); } }
+                        public bool Ribbon_Champion             { get { return this.DecryptedData[orders[this.order, 3] * 12 + 8].GetBit(6); } }
+                        public bool Ribbon_Winning              { get { return this.DecryptedData[orders[this.order, 3] * 12 + 9].GetBit(7); } }
+                        public bool Ribbon_Victory              { get { return this.DecryptedData[orders[this.order, 3] * 12 + 10].GetBit(0); } }
+                        public bool Ribbon_Artist               { get { return this.DecryptedData[orders[this.order, 3] * 12 + 10].GetBit(1); } }
+                        public bool Ribbon_Effort               { get { return this.DecryptedData[orders[this.order, 3] * 12 + 10].GetBit(2); } }
+                        public bool Ribbon_Special1             { get { return this.DecryptedData[orders[this.order, 3] * 12 + 10].GetBit(3); } }
+                        public bool Ribbon_Special2             { get { return this.DecryptedData[orders[this.order, 3] * 12 + 10].GetBit(4); } }
+                        public bool Ribbon_Special3             { get { return this.DecryptedData[orders[this.order, 3] * 12 + 10].GetBit(5); } }
+                        public bool Ribbon_Special4             { get { return this.DecryptedData[orders[this.order, 3] * 12 + 10].GetBit(6); } }
+                        public bool Ribbon_Special5             { get { return this.DecryptedData[orders[this.order, 3] * 12 + 10].GetBit(7); } }
+                        public bool Ribbon_Special6             { get { return this.DecryptedData[orders[this.order, 3] * 12 + 11].GetBit(1); } }                        
+                    }
+                }
+                
+                
+            }
+            public class PCBufferClass : Section
+            {
+                internal Data data;
+                internal uint offsets;
+                internal uint id;
+                internal PCBufferClass(Data data, uint offset,uint id) : base(data, offset) { this.data = data; this.offset = offset; this.id = id; }
+            }
+            public class PCPokemonsClass
+            {
+                public Data data;
+                internal PokemonBoxClass[] _pkms;
+                public PokemonBoxClass this[uint Box,uint Index]
+                {
+                    get { return this._pkms[Box*30+Index]; }
+                }
+                public uint CurrentPCBox
+                {
+                    get { return this.data.Read.Uint(0); }
+                }
+                public string[] PCBoxNames
+                {
+                    get
+                    {
+                        List<string> result = new List<string>();
+
+                        for (uint i = 0x8344; i < 0x83C2; i += 9)
+                            result.Add(this.data.Read.String(i, 9));
+                        return result.ToArray();
+                    }
+                }
+                public byte Wallpaper(uint index)
+                {
+                    if (index > 14)
+                        return 255;
+                    return this.data[0x83C2 + index];
+                }
+                internal PCPokemonsClass(PCBufferClass[] pcs)
+                {
+                    List<byte> d = new List<byte>();
+                    for (int i = 0; i < pcs.Length; i++)
+                        for (int x = 0; x < pcs[i].SectionChecksumableData[i+5]; x++)
+                            d.Add(pcs[i].data[x + pcs[i].offset]);
+                    this.data = new Data(d.ToArray());
+                    uint index = 4;
+                    this._pkms = new PokemonBoxClass[420];
+                    for (int i = 0; i < 420; i++)
+                    {
+                        this._pkms[i] = new PokemonBoxClass(this.data, index);
+                        index += 80;
+                    }
+                }
+                        
+                public class PokemonBoxClass : TeamItemsClass.PokemonPartyClass
+                {
+                    internal PokemonBoxClass(Data data, uint offset) : base(data, offset) { this.data = data; this.offset = offset; }
+                    public override uint StatusCondition { get { return 0; /*Need caluclation*/ } }
+                    public override byte Level { get { return 0; /*Need caluclation*/ } }
+                    public override byte Pokerus { get { return 0; /*Need caluclation*/ } }
+                    public override ushort Attack { get { return 0; /*Need caluclation*/ } }
+                    public override ushort CurrentHP { get { return 0; /*Need caluclation*/ } }
+                    public override ushort Defence { get { return 0; /*Need caluclation*/ } }
+                    public override ushort SPAttack { get { return 0; /*Need caluclation*/ } }
+                    public override ushort SPDefence { get { return 0; /*Need caluclation*/ } }
+                    public override ushort Speed { get { return 0; /*Need caluclation*/ } }
+                    public override ushort TotalHP { get { return 0; /*Need caluclation*/ } }
+
+                }
+            }
+
+        }
+
     }
 }

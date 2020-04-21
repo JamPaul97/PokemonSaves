@@ -4,11 +4,11 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{1AD8CC35-99DD-4A73-A15E-E0617B0A915A}</ProjectGuid>
+    <ProjectGuid>{9A6A3521-FFEB-4D07-81EC-95FB5C64697D}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Gen3</RootNamespace>
-    <AssemblyName>Gen3</AssemblyName>
+    <RootNamespace>Resources</RootNamespace>
+    <AssemblyName>Resources</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
@@ -42,37 +42,16 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Data\Items\Item.cs" />
-    <Compile Include="Data\Items\Pocket.cs" />
-    <Compile Include="Data\Data.cs" />
-    <Compile Include="Data\Items\Pokemon.cs" />
-    <Compile Include="Enumurators.cs" />
-    <Compile Include="Extensions.cs" />
-    <Compile Include="Primatives\Item.cs" />
-    <Compile Include="Primatives\PokeData\Attacks.cs" />
-    <Compile Include="Primatives\PokeData\EVs.cs" />
-    <Compile Include="Primatives\PokeData\Growth.cs" />
-    <Compile Include="Primatives\PokeData\IVs.cs" />
-    <Compile Include="Primatives\PokeData\Misc.cs" />
-    <Compile Include="Primatives\PokeData\PokemonData.cs" />
-    <Compile Include="Primatives\PokeData\Ribbons.cs" />
-    <Compile Include="Primatives\Pokemon.cs" />
-    <Compile Include="Primatives\TimePlayed.cs" />
+    <Compile Include="Gen1\Badges\Badge.cs" />
+    <Compile Include="Gen1\Badges\Res.cs" />
+    <Compile Include="Class1.cs" />
+    <Compile Include="Gen1\Items\Res.cs" />
+    <Compile Include="Gen1\Pokemons\Pokemon.cs" />
+    <Compile Include="Gen1\Pokemons\Res.cs" />
+    <Compile Include="Gen3\Characters.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Save\Data.cs" />
-    <Compile Include="Save\SaveFile.cs" />
-    <Compile Include="Save\SaveFilev1.cs" />
-    <Compile Include="Save\Section.cs" />
+    <Compile Include="Toolbox.cs" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Resources\Resources.csproj">
-      <Project>{9a6a3521-ffeb-4d07-81ec-95fb5c64697d}</Project>
-      <Name>Resources</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Toolbox\Toolbox.csproj">
-      <Project>{affb0ac8-dab5-4900-ad7c-55f0adb93e2b}</Project>
-      <Name>Toolbox</Name>
-    </ProjectReference>
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
