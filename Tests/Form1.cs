@@ -460,11 +460,12 @@ namespace Tests
         List<ushort> aa = new List<ushort>();
         private void button1_Click(object sender, EventArgs e)
         {
-            var b = PokeAPI.WebConnector.Request("https://pokeapi.co/api/v2/evolution-chain", new System.Collections.Specialized.NameValueCollection()
+            PokeAPI.Connector.Initialize();
+            var max = PokeAPI.Connector.PokemonSpecies.All(1000, 0).count;
+            for (uint i = 1; i < max; i++)
             {
-                {"limit","60" },
-                {"start","50" }
-            });
+                var b = PokeAPI.Connector.PokemonSpecies[i];
+            }
         }
 
     }

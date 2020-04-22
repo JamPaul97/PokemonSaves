@@ -5,7 +5,7 @@ using System.IO;
 using System.Net.Cache;
 namespace PokeAPI
 {
-    public static class WebConnector
+    internal static class WebConnector
     {
         public static string Request(string url,NameValueCollection data = null)
         {

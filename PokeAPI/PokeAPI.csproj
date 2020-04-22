@@ -31,6 +31,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Newtonsoft.Json, Version=12.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\..\Logger\Logger\Newtonsoft.Json.12.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -41,8 +44,125 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Cache.cs" />
+    <Compile Include="Cacher.cs" />
+    <Compile Include="Connector.cs" />
+    <Compile Include="EndPoints\Berry\Bases\FlavorMap.cs" />
+    <Compile Include="EndPoints\Berry\Bases\Berry.cs" />
+    <Compile Include="EndPoints\Berry\Bases\Firmness.cs" />
+    <Compile Include="EndPoints\Berry\Bases\Flavor.cs" />
+    <Compile Include="EndPoints\Contest\Bases\ContestName.cs" />
+    <Compile Include="EndPoints\Contest\Bases\Effect.cs" />
+    <Compile Include="EndPoints\Contest\Bases\EffectEntry.cs" />
+    <Compile Include="EndPoints\Contest\Bases\Type.cs" />
+    <Compile Include="EndPoints\Encounter\Bases\Condition.cs" />
+    <Compile Include="EndPoints\Encounter\Bases\ConditionValue.cs" />
+    <Compile Include="EndPoints\Encounter\Bases\Method.cs" />
+    <Compile Include="EndPoints\Endpoint.cs" />
+    <Compile Include="EndPoints\Evolution\Bases\Chain.cs" />
+    <Compile Include="EndPoints\Evolution\Bases\ChainLink.cs" />
+    <Compile Include="EndPoints\Evolution\Bases\Detail.cs" />
+    <Compile Include="EndPoints\Evolution\Bases\Trigger.cs" />
+    <Compile Include="EndPoints\Generation\Bases\Generation.cs" />
+    <Compile Include="EndPoints\Item\Bases\Attribute.cs" />
+    <Compile Include="EndPoints\Item\Bases\Category.cs" />
+    <Compile Include="EndPoints\Item\Bases\FlingEffect.cs" />
+    <Compile Include="EndPoints\Item\Bases\HolderPokemon.cs" />
+    <Compile Include="EndPoints\Item\Bases\HolderPokemonVersionDetail.cs" />
+    <Compile Include="EndPoints\Item\Bases\Item.cs" />
+    <Compile Include="EndPoints\Item\Bases\Pocket.cs" />
+    <Compile Include="EndPoints\Item\Bases\Sprites.cs" />
+    <Compile Include="EndPoints\Location\Bases\Area.cs" />
+    <Compile Include="EndPoints\Location\Bases\EncounterMethodRate.cs" />
+    <Compile Include="EndPoints\Location\Bases\EncounterVersionDetails.cs" />
+    <Compile Include="EndPoints\Location\Bases\Location.cs" />
+    <Compile Include="EndPoints\Location\Bases\PalParkArea.cs" />
+    <Compile Include="EndPoints\Location\Bases\PalParkEncounterSpecies.cs" />
+    <Compile Include="EndPoints\Location\Bases\PokemonEncounter.cs" />
+    <Compile Include="EndPoints\Location\Bases\Region.cs" />
+    <Compile Include="EndPoints\Machine\Bases\Machine.cs" />
+    <Compile Include="EndPoints\Move\Bases\Ailment.cs" />
+    <Compile Include="EndPoints\Move\Bases\BattleStyle.cs" />
+    <Compile Include="EndPoints\Move\Bases\ContestComboDetail.cs" />
+    <Compile Include="EndPoints\Move\Bases\ContestComboSets.cs" />
+    <Compile Include="EndPoints\Move\Bases\DamageClass.cs" />
+    <Compile Include="EndPoints\Move\Bases\FlavorText.cs" />
+    <Compile Include="EndPoints\Move\Bases\LearnMethod.cs" />
+    <Compile Include="EndPoints\Move\Bases\MetaData.cs" />
+    <Compile Include="EndPoints\Move\Bases\ModelName.cs" />
+    <Compile Include="EndPoints\Move\Bases\Move.cs" />
+    <Compile Include="EndPoints\Move\Bases\StatChange.cs" />
+    <Compile Include="EndPoints\Move\Bases\Target.cs" />
+    <Compile Include="EndPoints\Pokedexe\Bases\Pokedex.cs" />
+    <Compile Include="EndPoints\Pokedexe\Bases\PokemonEntry.cs" />
+    <Compile Include="EndPoints\Pokemon\Bases\Ability.cs" />
+    <Compile Include="EndPoints\Pokemon\Bases\AbilityEffectChange.cs" />
+    <Compile Include="EndPoints\Pokemon\Bases\AbilityFlavorText.cs" />
+    <Compile Include="EndPoints\Pokemon\Bases\AbilityPokemon.cs" />
+    <Compile Include="EndPoints\Pokemon\Bases\AwesomeName.cs" />
+    <Compile Include="EndPoints\Pokemon\Bases\Characteristic.cs" />
+    <Compile Include="EndPoints\Pokemon\Bases\EggGroup.cs" />
+    <Compile Include="EndPoints\Pokemon\Bases\Gender.cs" />
+    <Compile Include="EndPoints\Pokemon\Bases\Genus.cs" />
+    <Compile Include="EndPoints\Pokemon\Bases\GrowthRate.cs" />
+    <Compile Include="EndPoints\Pokemon\Bases\GrowthRateExperienceLevel.cs" />
+    <Compile Include="EndPoints\Pokemon\Bases\MoveBattleStylePreference.cs" />
+    <Compile Include="EndPoints\Pokemon\Bases\MoveStatAffect.cs" />
+    <Compile Include="EndPoints\Pokemon\Bases\MoveStatAffectSets.cs" />
+    <Compile Include="EndPoints\Pokemon\Bases\Nature.cs" />
+    <Compile Include="EndPoints\Pokemon\Bases\NaturePokeathlonStatAffect.cs" />
+    <Compile Include="EndPoints\Pokemon\Bases\NaturePokeathlonStatAffectSets.cs" />
+    <Compile Include="EndPoints\Pokemon\Bases\NatureStatAffectSets.cs" />
+    <Compile Include="EndPoints\Pokemon\Bases\NatureStatChange.cs" />
+    <Compile Include="EndPoints\Pokemon\Bases\PalParkEncounterArea.cs" />
+    <Compile Include="EndPoints\Pokemon\Bases\PokeathlonStat.cs" />
+    <Compile Include="EndPoints\Pokemon\Bases\Pokemon.cs" />
+    <Compile Include="EndPoints\Pokemon\Bases\PokemonAbility.cs" />
+    <Compile Include="EndPoints\Pokemon\Bases\PokemonColor.cs" />
+    <Compile Include="EndPoints\Pokemon\Bases\PokemonForm.cs" />
+    <Compile Include="EndPoints\Pokemon\Bases\PokemonFormSprites.cs" />
+    <Compile Include="EndPoints\Pokemon\Bases\PokemonHabitat.cs" />
+    <Compile Include="EndPoints\Pokemon\Bases\PokemonHeldItem.cs" />
+    <Compile Include="EndPoints\Pokemon\Bases\PokemonHeldItemVersion.cs" />
+    <Compile Include="EndPoints\Pokemon\Bases\PokemonMove.cs" />
+    <Compile Include="EndPoints\Pokemon\Bases\PokemonMoveVersion.cs" />
+    <Compile Include="EndPoints\Pokemon\Bases\PokemonShape.cs" />
+    <Compile Include="EndPoints\Pokemon\Bases\PokemonSpecies.cs" />
+    <Compile Include="EndPoints\Pokemon\Bases\PokemonSpeciesDexEntry.cs" />
+    <Compile Include="EndPoints\Pokemon\Bases\PokemonSpeciesGender.cs" />
+    <Compile Include="EndPoints\Pokemon\Bases\PokemonSpeciesVariety.cs" />
+    <Compile Include="EndPoints\Pokemon\Bases\PokemonSprites.cs" />
+    <Compile Include="EndPoints\Pokemon\Bases\PokemonStat.cs" />
+    <Compile Include="EndPoints\Pokemon\Bases\PokemonType.cs" />
+    <Compile Include="EndPoints\Pokemon\Bases\Stat.cs" />
+    <Compile Include="EndPoints\Pokemon\Bases\Type.cs" />
+    <Compile Include="EndPoints\Pokemon\Bases\TypePokemon.cs" />
+    <Compile Include="EndPoints\Pokemon\Bases\TypeRelations.cs" />
+    <Compile Include="EndPoints\SuperContest\Bases\Effect.cs" />
+    <Compile Include="EndPoints\VersionGroup\Bases\VersionGroup.cs" />
+    <Compile Include="EndPoints\Versions\Bases\Version.cs" />
+    <Compile Include="Primatives\APIResource.cs" />
+    <Compile Include="Primatives\Description.cs" />
+    <Compile Include="Primatives\Effect.cs" />
+    <Compile Include="Primatives\Encounter.cs" />
+    <Compile Include="Primatives\EndpointBase.cs" />
+    <Compile Include="Primatives\FlavorText.cs" />
+    <Compile Include="Primatives\GenerationGameIndex.cs" />
+    <Compile Include="Primatives\Language.cs" />
+    <Compile Include="Primatives\MachineVersionDetail.cs" />
+    <Compile Include="Primatives\Name.cs" />
+    <Compile Include="Primatives\NamedAPIResource.cs" />
+    <Compile Include="Primatives\VerboseEffect.cs" />
+    <Compile Include="Primatives\VersionEncounterDetail.cs" />
+    <Compile Include="Primatives\VersionGameIndex.cs" />
     <Compile Include="WebConnector.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="EndPoints\Move\Bases\PastMoveStatValues.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
